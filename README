@@ -1,3 +1,15 @@
-# hello
+## hello
 # based on contExt
 # python==3.9.18
+
+## install 
+# conda create --name OpenLPTGUI python=3.9.18
+# conda config --add channels conda-forge
+# conda install -r requirements.txt
+
+## run
+# conda activate OpenLPTGUI
+# python main.py
+
+## close
+# conda deactivate
