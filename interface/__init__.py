@@ -32,7 +32,7 @@ class Interface:
             
             
             
-        with dpg.window(tag="CalibPlate", show=False):
+        with dpg.window(tag="CalibPlate", show=False, width=900, height=400):
             applyTheme()
             self.showCalibPlateTabBar()
             self.createSaveImageDialog()

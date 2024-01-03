@@ -2,7 +2,7 @@ import dearpygui.dearpygui as dpg
 
 def showContourExtraction(callbacks):
     with dpg.group(horizontal=True):
-        with dpg.child_window(width=300):
+        with dpg.child_window(width=300,horizontal_scrollbar=True):
             dpg.add_text('OpenCV2 Find Contour')
             dpg.add_text('Approximation Mode')
             dpg.add_listbox(tag='approximationModeListbox', items=['None', 'Simple', 'TC89_L1', 'TC89_KCOS'], width=-1)
@@ -26,19 +26,19 @@ def showContourExtraction(callbacks):
             with dpg.group(tag='Extract Plane Coordinate',show=False):
                 dpg.add_text('Extract Plane Coordinates')
 
-                dpg.add_text('Enter min and max index for left axis')
+                dpg.add_text('Enter bottom and top index for left axis')
                 dpg.add_input_int(tag='Axis1',label='Fix x', default_value=-9)
-                dpg.add_input_int(tag='Axis1_Min',label='Min y', default_value=-7)
-                dpg.add_input_int(tag='Axis1_Max',label='Max y', default_value=7)
-                dpg.add_button(tag='selectAxis1',label='Select min and max points',callback=callbacks.contourExtraction.selectAxis)
+                dpg.add_input_int(tag='Axis1_Bottom',label='Bottom ID', default_value=-7)
+                dpg.add_input_int(tag='Axis1_Top',label='Top ID', default_value=7)
+                dpg.add_button(tag='selectAxis1',label='Select bottom and top points',callback=callbacks.contourExtraction.selectAxis)
                 dpg.add_text('Point 1: --',tag='selectAxis1Pt1')
                 dpg.add_text('Point 2: --',tag='selectAxis1Pt2')
                 
-                dpg.add_text('Enter min and max index for bottom axis')
+                dpg.add_text('Enter left and right index for bottom axis')
                 dpg.add_input_int(tag='Axis2',label='Fix y', default_value=-7)
-                dpg.add_input_int(tag='Axis2_Min',label='Min x', default_value=-9)
-                dpg.add_input_int(tag='Axis2_Max',label='Max x', default_value=9)
-                dpg.add_button(tag='selectAxis2',label='Select min and max points',callback=callbacks.contourExtraction.selectAxis)
+                dpg.add_input_int(tag='Axis2_Left',label='Left ID', default_value=-9)
+                dpg.add_input_int(tag='Axis2_Right',label='Right ID', default_value=9)
+                dpg.add_button(tag='selectAxis2',label='Select left and right points',callback=callbacks.contourExtraction.selectAxis)
                 dpg.add_text('Point 1: --',tag='selectAxis2Pt1')
                 dpg.add_text('Point 2: --',tag='selectAxis2Pt2')
 
@@ -49,13 +49,13 @@ def showContourExtraction(callbacks):
             with dpg.group(tag='Extract World Coordinate',show=False):  
                 dpg.add_text('Extract World Coordinates')
                 dpg.add_text('Enter depth coordinate for the plane:')
-                dpg.add_input_float(tag='Axis3',label='In physical unit',default_value=0.5)
+                dpg.add_input_float(tag='Axis3',label='In physical unit')
                 dpg.add_text('Enter distance between calibration dots:')
-                dpg.add_input_float(tag='dist',label='Distance')
+                dpg.add_input_float(tag='dist',label='Distance',default_value=0.5)
                 dpg.add_text('The world axis for plane axis x is:')
-                dpg.add_listbox(tag='imgAxisX', items=['x', 'y', 'z'], width=-1, default_value='x')
+                dpg.add_listbox(tag='mouseAxisX', items=['x', 'y', 'z'], width=-1, default_value='x')
                 dpg.add_text('The world axis for plane axis y is:')
-                dpg.add_listbox(tag='imgAxisY', items=['x', 'y', 'z'], width=-1, default_value='y')
+                dpg.add_listbox(tag='mouseAxisY', items=['x', 'y', 'z'], width=-1, default_value='y')
                 
                 dpg.add_button(tag='extractWorldCoordinate', label='Extract world coordinate', callback=callbacks.contourExtraction.extractWorldCoordinate)
                 
@@ -64,17 +64,17 @@ def showContourExtraction(callbacks):
                 dpg.add_text("ERROR: You must finish selecting the previous axis.")
                 dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("errAxis", show=False))
                 
-            with dpg.window(label="ERROR! The previous xmin is different from the current value!", modal=True, show=False, tag="errXMin", no_title_bar=False):
-                dpg.add_text("ERROR: You must finish reset xmin index.")
-                dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("errXMin", show=False))
+            with dpg.window(label="ERROR! The previous left ID is different from the current value!", modal=True, show=False, tag="errLeftID", no_title_bar=False):
+                dpg.add_text("ERROR: You must reset left ID.")
+                dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("errLeftID", show=False))
                 
-            with dpg.window(label="ERROR! The previous ymin is different from the current value!", modal=True, show=False, tag="errYMin", no_title_bar=False):
-                dpg.add_text("ERROR: You must finish reset ymin index.")
-                dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("errYMin", show=False))
+            with dpg.window(label="ERROR! The previous bottom ID is different from the current value!", modal=True, show=False, tag="errBottomID", no_title_bar=False):
+                dpg.add_text("ERROR: You must reset bottom ID.")
+                dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("errBottomID", show=False))
                 
-            with dpg.window(label="ERROR! The world axis for x and y must be different!", modal=True, show=False, tag="errImgAxis", no_title_bar=False):
-                dpg.add_text("ERROR: You must finish reselect world axis.")
-                dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("errImgAxis", show=False))
+            with dpg.window(label="ERROR! The world axis for x and y must be different!", modal=True, show=False, tag="errMouseAxis", no_title_bar=False):
+                dpg.add_text("ERROR: You must reselect world axis.")
+                dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("errMouseAxis", show=False))
             
             
             with dpg.window(label="Save Files", modal=False, show=False, tag="exportCenters", no_title_bar=False, min_size=[600,255]):

@@ -31,7 +31,7 @@ class ContourExtraction:
         #        0 -->
         #        |
         #        v
-        # cv2: (col, row)
+        # cv2: (col, row) image_x: col, image_y: row
         # dpg mouse: (x,y)
         #        ^
         #        |
@@ -46,7 +46,7 @@ class ContourExtraction:
                                           # axis 1 
                                           # axis 2
         self.ptXYID = None
-        self.centerExport = None # WorldX,WorldY,WorldZ,Row,Col,ImgX,ImgY
+        self.centerExport = None # WorldX,WorldY,WorldZ,Row,Col,MouseX,MouseY
                                           
     def extractContour(self, sender=None, app_data=None):
 
@@ -201,26 +201,26 @@ class ContourExtraction:
 
     def extractPoints(self, sender=None, app_data=None):
         # get left axis 
-        xIDMin = dpg.get_value('Axis1')
-        yIDMin = dpg.get_value('Axis1_Min')
-        yIDMax = dpg.get_value('Axis1_Max')
+        LeftID = dpg.get_value('Axis1')
+        BottomID = dpg.get_value('Axis1_Bottom')
+        TopID = dpg.get_value('Axis1_Top')
         
         x1,y1,x2,y2 = self.axis[0,:]
         pt1 = np.array([x1,y1])
-        vecY = np.array([x2-x1,y2-y1]) / (yIDMax-yIDMin)
+        vecY = np.array([x2-x1,y2-y1]) / (TopID-BottomID)
         
         # get bottom axis
-        if yIDMin != dpg.get_value('Axis2'):
-            dpg.configure_item('errYMin')
+        if BottomID != dpg.get_value('Axis2'):
+            dpg.configure_item('errBottomID')
             return
-        if xIDMin != dpg.get_value('Axis2_Min'):
-            dpg.configure_item('errXMin')
+        if LeftID != dpg.get_value('Axis2_Left'):
+            dpg.configure_item('errLeftID')
             return
-        xIDMax = dpg.get_value('Axis2_Max')
+        RightID = dpg.get_value('Axis2_Right')
         
         x1,y1,x2,y2 = self.axis[1,:]
         pt2 = np.array([x1,y1])
-        vecX = np.array([x2-x1,y2-y1]) / (xIDMax-xIDMin)
+        vecX = np.array([x2-x1,y2-y1]) / (RightID-LeftID)
 
         
         # find idex matching
@@ -233,12 +233,14 @@ class ContourExtraction:
                         np.sum(np.square(vecY))) / 4
         ptRef = (pt1+pt2) / 2
         
-        nx = xIDMax - xIDMin + 1
-        ny = yIDMax - yIDMin + 1
+        nx = abs(RightID-LeftID) + 1
+        ny = abs(TopID-BottomID) + 1
+        signX = np.sign(RightID-LeftID)
+        signY = np.sign(TopID-BottomID)
         for i in range(0,nx):
-            addX = vecX * i 
+            addX = vecX * i * signX
             for j in range(0,ny):
-                addY = vecY * j
+                addY = vecY * j * signY
                 add = addX + addY 
                 ptGrid = ptRef + add
                 
@@ -246,8 +248,8 @@ class ContourExtraction:
                 id = np.argmin(diff)
                 
                 if diff[id] < threshold:
-                    self.ptXYID[id, 2] = xIDMin + i
-                    self.ptXYID[id, 3] = yIDMin + j
+                    self.ptXYID[id, 2] = LeftID + i * signX
+                    self.ptXYID[id, 3] = BottomID + j * signY
         # plot idex 
         image = self.imageProcessing.blocks[self.imageProcessing.getLastActiveBeforeMethod('findContour')]['output'].copy()
         
@@ -267,34 +269,34 @@ class ContourExtraction:
         pass
     
     def extractWorldCoordinate(self, sender=None, app_data=None):
-        imgAxisXTag = dpg.get_value('imgAxisX')
-        imgAxisYTag = dpg.get_value('imgAxisY')
+        mouseAxisXTag = dpg.get_value('mouseAxisX')
+        mouseAxisYTag = dpg.get_value('mouseAxisY')
         
-        if imgAxisXTag == imgAxisYTag:
-            dpg.configure_item('errImgAxis', show=True)
+        if mouseAxisXTag == mouseAxisYTag:
+            dpg.configure_item('errMouseAxis', show=True)
             return
         
-        imgAxisX = 0
-        if imgAxisXTag == 'y':
-            imgAxisX = 1
-        elif imgAxisXTag == 'z':
-            imgAxisX = 2
+        mouseAxisX = 0
+        if mouseAxisXTag == 'y':
+            mouseAxisX = 1
+        elif mouseAxisXTag == 'z':
+            mouseAxisX = 2
         
-        imgAxisY = 1
-        if imgAxisYTag == 'x':
-            imgAxisY = 0
-        elif imgAxisYTag == 'z':
-            imgAxisY = 2
+        mouseAxisY = 1
+        if mouseAxisYTag == 'x':
+            mouseAxisY = 0
+        elif mouseAxisYTag == 'z':
+            mouseAxisY = 2
         
-        imgAxisZ = 3 - imgAxisX - imgAxisY
+        mouseAxisZ = 3 - mouseAxisX - mouseAxisY
         
-        centers = self.ptXYID[np.logical_not(np.isnan(self.ptXYID[:,2])),:] # ImgX,ImgY,ImgXID,ImgYID
-        self.centerExport = np.zeros(shape=(centers.shape[0],7)) # WorldX,WorldY,WorldZ,Row,Col,ImgX,ImgY
+        centers = self.ptXYID[np.logical_not(np.isnan(self.ptXYID[:,2])),:] # MouseX,MouseY,MouseXID,MouseYID
+        self.centerExport = np.zeros(shape=(centers.shape[0],7)) # WorldX,WorldY,WorldZ,Row,Col,MouseX,MouseY
         
         unit = dpg.get_value('dist')
-        self.centerExport[:,imgAxisX] = centers[:,2] * unit
-        self.centerExport[:,imgAxisY] = centers[:,3] * unit
-        self.centerExport[:,imgAxisZ] = dpg.get_value('Axis3')
+        self.centerExport[:,mouseAxisX] = centers[:,2] * unit
+        self.centerExport[:,mouseAxisY] = centers[:,3] * unit
+        self.centerExport[:,mouseAxisZ] = dpg.get_value('Axis3')
         self.centerExport[:,3] = centers[:,0]
         self.centerExport[:,4] = self.height - centers[:,1]
         self.centerExport[:,5] = centers[:,0]
@@ -321,7 +323,7 @@ class ContourExtraction:
             dpg.configure_item("exportCentersError", show=True)
             return
         
-        df = pd.DataFrame(self.centerExport, columns=['WorldX','WorldY','WorldZ','Row','Col','ImgX','ImgY'])
+        df = pd.DataFrame(self.centerExport, columns=['WorldX','WorldY','WorldZ','Row','Col','MouseX','MouseY'])
         df.to_csv(os.path.join(self.exportCenterFilePath, self.exportCenterFileName),index=False)
         
         dpg.configure_item("exportCenters", show=False)
