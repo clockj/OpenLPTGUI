@@ -323,7 +323,7 @@ class ContourExtraction:
             dpg.configure_item("exportCentersError", show=True)
             return
         
-        df = pd.DataFrame(self.centerExport, columns=['WorldX','WorldY','WorldZ','Row','Col','MouseX','MouseY'])
+        df = pd.DataFrame(self.centerExport, columns=['WorldX','WorldY','WorldZ','Col(ImgX)','Row(ImgY)','MouseX','MouseY'])
         df.to_csv(os.path.join(self.exportCenterFilePath, self.exportCenterFileName),index=False)
         
         dpg.configure_item("exportCenters", show=False)
