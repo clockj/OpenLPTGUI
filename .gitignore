@@ -4,5 +4,7 @@
 ./*.txt
 ./*.dat
 ./*.csv
+images/*.csv
 interface/__pycache__/*
+callbacks/__pycache__/*
 release/*
