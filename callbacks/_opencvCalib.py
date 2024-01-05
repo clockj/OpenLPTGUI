@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import os.path
 
-class opencvCalib:
+class OpencvCalib:
     def __init__(self) -> None:
         self.exportFilePath = None
         self.exportFileName = None

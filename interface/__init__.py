@@ -6,13 +6,13 @@ from ._thresholdingTab import showThresholding
 from ._theme import applyTheme
 
 from ._camCalibWindow import showOpenCVCalib
+from ._vscTab import showVSC
 
 class Interface:
 
     def __init__(self, callbacks) -> None:
         self.callbacks = callbacks
         self.show()
-        pass
 
     def show(self):
         dpg.create_context()
@@ -23,15 +23,22 @@ class Interface:
             dpg.add_text('1. Select a calibration method')
             dpg.add_listbox(tag='calibMethod', items=['Calibration Plate', 'Easy Wand'])
             dpg.add_button(label='Apply Method', callback=self.selectCalibMethod)
+            dpg.add_text('')
             
             dpg.add_text('2. Select a camera model')
             dpg.add_listbox(tag='camModel', items=['OpenCV', 'Tsai', 'Polynomial'])
             dpg.add_button(label='Apply Model', callback=self.selectCamModel)
+            dpg.add_text('')
             
-            dpg.add_text('3. Run Volume Self Calibration (Optional, suggested for few calibration points)')
-            dpg.add_button(label='Run VSC')
+            dpg.add_text('3. Image Preprocessing (Optional)')
+            dpg.add_button(label='Run Preprocessing')
+            dpg.add_text('')
             
-            dpg.add_text('4. Run OpenLPT')
+            dpg.add_text('4. Run Volume Self Calibration (Optional, suggested for few calibration points)')
+            dpg.add_button(label='Run VSC', callback=lambda: dpg.configure_item('vsc', show=True))
+            dpg.add_text('')
+            
+            dpg.add_text('5. Run OpenLPT')
             dpg.add_button(label='Run OpenLPT')
             
             
@@ -48,6 +55,10 @@ class Interface:
         with dpg.window(tag="opcvCalib", show=False, width=800, height=400, label='OpenCV Calibration'):
             applyTheme()
             showOpenCVCalib(self.callbacks)
+        
+        with dpg.window(tag="vsc", show=False, width=800, height=400, label='Volume Self Calibration'):
+            applyTheme()
+            showVSC(self.callbacks)
             
         dpg.setup_dearpygui()
         dpg.show_viewport()
