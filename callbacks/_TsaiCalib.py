@@ -1,8 +1,10 @@
 import cv2
 import numpy as np
 class TsaiCalib:
-    def __init__(self, name):
-        self.name = name
+    
+    def __init__(self) -> None:
+
+        pass
 
     def greet(self):
         print(f"Hello, {self.name}!")

@@ -249,12 +249,10 @@ class ImageProcessing:
         pass
 
     def importImage(self, sender = None, app_data = None):
-        # Cria imagem na aba
         self.blocks[Blocks.importImage.value]['output'] = self.openImage(self.filePath)
 
         Texture.createAllTextures(self.blocks[Blocks.importImage.value]['output'])
 
-        # Popula os dados na lateral
         dpg.set_value('file_name_text', 'File Name: ' + self.fileName)
         dpg.set_value('file_path_text', 'File Path: ' + self.filePath)
 

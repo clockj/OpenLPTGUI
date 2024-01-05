@@ -5,6 +5,8 @@ from ._processingTab import showProcessing
 from ._thresholdingTab import showThresholding
 from ._theme import applyTheme
 
+from ._camCalibWindow import showOpenCVCalib
+
 class Interface:
 
     def __init__(self, callbacks) -> None:
@@ -19,11 +21,12 @@ class Interface:
         with dpg.window(tag="Main"):
             applyTheme()
             dpg.add_text('1. Select a calibration method')
-            dpg.add_listbox(tag='CalibMethod', items=['Calibration Plate', 'Easy Wand'])
+            dpg.add_listbox(tag='calibMethod', items=['Calibration Plate', 'Easy Wand'])
             dpg.add_button(label='Apply Method', callback=self.selectCalibMethod)
             
-            dpg.add_text('2. Calibrate each camera')
-            dpg.add_button(label='Start calibration', callback=self.calibration)
+            dpg.add_text('2. Select a camera model')
+            dpg.add_listbox(tag='camModel', items=['OpenCV', 'Tsai', 'Polynomial'])
+            dpg.add_button(label='Apply Model', callback=self.selectCamModel)
             
             dpg.add_text('3. Set OpenLPT parameters')
             
@@ -32,14 +35,18 @@ class Interface:
             
             
             
-        with dpg.window(tag="CalibPlate", show=False, width=900, height=400):
+        with dpg.window(tag="calibPlate", show=False, width=800, height=400, label='Calibration Plate'):
             applyTheme()
             self.showCalibPlateTabBar()
             self.createSaveImageDialog()
 
-        with dpg.window(tag="EasyWand", show=False):
+        with dpg.window(tag="easyWand", show=False, width=800, height=400, label='Easy Wand'):
             applyTheme()
             dpg.add_text('Easy Wand')
+            
+        with dpg.window(tag="opcvCalib", show=False, width=800, height=400, label='OpenCV Calibration'):
+            applyTheme()
+            showOpenCVCalib(self.callbacks)
             
         dpg.setup_dearpygui()
         dpg.show_viewport()
@@ -49,15 +56,17 @@ class Interface:
         pass
     
     def selectCalibMethod(self, sender=None, app_data=None):
-        method = dpg.get_value('CalibMethod')
+        method = dpg.get_value('calibMethod')
         if method == 'Calibration Plate':
-            dpg.configure_item('CalibPlate', show=True)
+            dpg.configure_item('calibPlate', show=True)
         else:
-            dpg.configure_item('EasyWand', show=True)
+            dpg.configure_item('easyWand', show=True)
         pass
     
-    def calibration(self, sender=None, app_data=None):
-        
+    def selectCamModel(self, sender=None, app_data=None):
+        model = dpg.get_value('camModel')
+        if model == 'OpenCV':
+            dpg.configure_item('opcvCalib', show=True)
         pass
     
     """
