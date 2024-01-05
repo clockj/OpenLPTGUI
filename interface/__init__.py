@@ -28,10 +28,11 @@ class Interface:
             dpg.add_listbox(tag='camModel', items=['OpenCV', 'Tsai', 'Polynomial'])
             dpg.add_button(label='Apply Model', callback=self.selectCamModel)
             
-            dpg.add_text('3. Set OpenLPT parameters')
-            
+            dpg.add_text('3. Run Volume Self Calibration (Optional, suggested for few calibration points)')
+            dpg.add_button(label='Run VSC')
             
             dpg.add_text('4. Run OpenLPT')
+            dpg.add_button(label='Run OpenLPT')
             
             
             

@@ -81,7 +81,6 @@ class opencvCalib:
         pt2D, _ = cv2.projectPoints(
             self.posecalibPt3D, self.rotVec, self.transVec, self.camMat, self.distCoeff)
         self.posecalibErr = cv2.norm(pt2D, self.posecalibPt2D, cv2.NORM_L2)/self.posecalibPt2D.shape[0]
-        print(pt2D.shape)
         
         # Print outputs onto the output window 
         dpg.set_value('opencvPosecalibErr', f'Pose Calibration Error: {self.posecalibErr}')
@@ -191,13 +190,19 @@ class opencvCalib:
         filePath = os.path.join(self.exportFilePath, self.exportFileName)
         
         with open(filePath, 'w') as f:
-            f.write('Camera Calibration Error: ' + str(self.camcalibErr) + '\n')
-            f.write('Pose Calibration Error: ' + str(self.posecalibErr) + '\n')
+            f.write('# Camera Calibration Error: \n' + str(self.camcalibErr) + '\n')
+            f.write('# Pose Calibration Error: \n' + str(self.posecalibErr) + '\n')
             
-            f.write('Camera Matrix: \n' + str(self.camMat) + '\n')
-            f.write('Distortion Coefficients: \n' + str(self.distCoeff) + '\n')
-            f.write('Rotation Vector: \n' + str(self.rotVec) + '\n')
-            f.write('Translation Vector: \n' + str(self.transVec) + '\n')
+            f.write('# Camera Matrix: \n')
+            f.write(str(self.camMat[0,0])+','+str(self.camMat[0,1])+','+str(self.camMat[0,2])+'\n')
+            f.write(str(self.camMat[1,0])+','+str(self.camMat[1,1])+','+str(self.camMat[1,2])+'\n')
+            f.write(str(self.camMat[2,0])+','+str(self.camMat[2,1])+','+str(self.camMat[2,2])+'\n')
+            f.write('# Distortion Coefficients: \n')
+            f.write(str(self.distCoeff[0,0])+','+str(self.distCoeff[0,1])+','+str(self.distCoeff[0,2])+','+str(self.distCoeff[0,3])+','+str(self.distCoeff[0,4])+'\n')
+            f.write('# Rotation Vector: \n')
+            f.write(str(self.rotVec[0,0])+','+str(self.rotVec[1,0])+','+str(self.rotVec[2,0])+'\n')
+            f.write('# Translation Vector: \n')
+            f.write(str(self.transVec[0,0])+','+str(self.transVec[1,0])+','+str(self.transVec[2,0])+'\n')
             
         dpg.configure_item("exportOpencvCalib", show=False)
 
