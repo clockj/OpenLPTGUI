@@ -82,7 +82,7 @@ def showOpenCVCalib(callbacks):
                 dpg.add_text('Camera Calibration Error:', tag='opencvCamcalibErr') 
                 dpg.add_text('Camera Matrix:')
                 dpg.add_text('', tag='opencvCamMat')
-                dpg.add_text('Distortion Coefficients: (k1,k2,k3,p1,p2)')
+                dpg.add_text('Distortion Coefficients: (k1,k2,p1,p2,k3)')
                 dpg.add_text('', tag='opencvDistCoeff')
                 
                 dpg.add_separator()
@@ -94,7 +94,7 @@ def showOpenCVCalib(callbacks):
                         dpg.add_table_column(label='File Name', width_fixed=True)
                         dpg.add_table_column(label='File Path', width_fixed=True)
                 
-                dpg.add_text('Pose Calibtraion Error:', tag='opencvPosecalibErr')
+                dpg.add_text('Pose Calibraion Error:', tag='opencvPosecalibErr')
                 dpg.add_text('Rotation Matrix:')
                 dpg.add_text('', tag='opencvRotMat')
                 dpg.add_text('Rotation Vector:')

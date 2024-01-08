@@ -31,6 +31,7 @@ class OpencvCalib:
         
         self.posecalibErr = None
         self.rotVec = None
+        self.rotMat = None
         self.transVec = None
         
 
@@ -76,7 +77,7 @@ class OpencvCalib:
         # Perform pose calibration
         _, self.rotVec, self.transVec = cv2.solvePnP(
             self.posecalibPt3D, self.posecalibPt2D, self.camMat, self.distCoeff, flags=optFlag)
-        rot_mat = cv2.Rodrigues(self.rotVec)[0]
+        self.rotMat = cv2.Rodrigues(self.rotVec)[0]
         
         pt2D, _ = cv2.projectPoints(
             self.posecalibPt3D, self.rotVec, self.transVec, self.camMat, self.distCoeff)
@@ -84,7 +85,7 @@ class OpencvCalib:
         
         # Print outputs onto the output window 
         dpg.set_value('opencvPosecalibErr', f'Pose Calibration Error: {self.posecalibErr}')
-        dpg.set_value('opencvRotMat', f'{rot_mat}')
+        dpg.set_value('opencvRotMat', f'{self.rotMat}')
         dpg.set_value('opencvRotVec', f'{self.rotVec}')
         dpg.set_value('opencvTransVec', f'{self.transVec}')
         
@@ -120,11 +121,12 @@ class OpencvCalib:
             
             pt3d = np.array(df.loc[:,['WorldX','WorldY','WorldZ']], np.float32)
             pt3d[:,2] = 0 # OpenCV require: z=0 for camera calibtraion
-            self.camcalibPt3D.append(np.reshape(pt3d, (1,pt3d.shape[0],3)))
+            self.camcalibPt3D.append(np.reshape(pt3d, (pt3d.shape[0],1,3)))
         
         # Print outputs onto the output window 
         dpg.configure_item('opencvOutputParent', show=True)
-        
+        for tag in dpg.get_item_children('opencvCamcalibFileTable')[1]:
+            dpg.delete_item(tag)
         
         for i in range(nFiles):
             with dpg.table_row(parent='opencvCamcalibFileTable'):
@@ -167,7 +169,7 @@ class OpencvCalib:
         
         pt3d = np.array(df.loc[:,['WorldX','WorldY','WorldZ']], np.float32)
         pt3d[:,2] = 0 # OpenCV require: z=0 for camera calibtraion
-        self.posecalibPt3D = np.reshape(pt3d, (1,pt3d.shape[0],3))
+        self.posecalibPt3D = np.reshape(pt3d, (pt3d.shape[0],1,3))
         
         # Print outputs onto the output window 
         with dpg.table_row(parent='opencvPosecalibFileTable'):
@@ -201,8 +203,20 @@ class OpencvCalib:
             f.write(str(self.distCoeff[0,0])+','+str(self.distCoeff[0,1])+','+str(self.distCoeff[0,2])+','+str(self.distCoeff[0,3])+','+str(self.distCoeff[0,4])+'\n')
             f.write('# Rotation Vector: \n')
             f.write(str(self.rotVec[0,0])+','+str(self.rotVec[1,0])+','+str(self.rotVec[2,0])+'\n')
+            f.write('# Rotation Matrix: \n')
+            f.write(str(self.rotMat[0,0])+','+str(self.rotMat[0,1])+','+str(self.rotMat[0,2])+'\n')
+            f.write(str(self.rotMat[1,0])+','+str(self.rotMat[1,1])+','+str(self.rotMat[1,2])+'\n')
+            f.write(str(self.rotMat[2,0])+','+str(self.rotMat[2,1])+','+str(self.rotMat[2,2])+'\n')
+            f.write('# Inverse of Rotation Matrix: \n')
+            rotMatInv = np.linalg.inv(self.rotMat)
+            f.write(str(rotMatInv[0,0])+','+str(rotMatInv[0,1])+','+str(rotMatInv[0,2])+'\n')
+            f.write(str(rotMatInv[1,0])+','+str(rotMatInv[1,1])+','+str(rotMatInv[1,2])+'\n')
+            f.write(str(rotMatInv[2,0])+','+str(rotMatInv[2,1])+','+str(rotMatInv[2,2])+'\n')
             f.write('# Translation Vector: \n')
             f.write(str(self.transVec[0,0])+','+str(self.transVec[1,0])+','+str(self.transVec[2,0])+'\n')
+            f.write('# Inverse of Translation Vector: \n')
+            transVecInv = -np.matmul(rotMatInv, self.transVec)
+            f.write(str(transVecInv[0,0])+','+str(transVecInv[1,0])+','+str(transVecInv[2,0])+'\n')
             
         dpg.configure_item("exportOpencvCalib", show=False)
 
