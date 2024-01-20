@@ -3,8 +3,8 @@ None
 # Pose Calibration Error: 
 None
 # Camera Matrix: 
-206.859934,0.0,511.5
-0.0,206.859934,511.5
+10342.9967,0.0,511.0
+0.0,-10342.9967,511.0
 0.0,0.0,1.0
 # Distortion Coefficients: 
 0.0,0.0,0.0,0.0,0.0

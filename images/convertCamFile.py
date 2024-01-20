@@ -12,10 +12,10 @@ for i in range(nCam):
 
     # camera matrix
     camMat = np.zeros((3,3))
-    camMat[0,0] = camParam[6]
-    camMat[0,2] = (camParam[2] - 1) / 2
-    camMat[1,1] = camParam[6]
-    camMat[1,2] = (camParam[3] - 1) / 2
+    camMat[0,0] = camParam[6] / camParam[4]
+    camMat[0,2] = (camParam[2]) / 2 - 1
+    camMat[1,1] = -camParam[6] / camParam[5]
+    camMat[1,2] = (camParam[3]) / 2 - 1
     camMat[2,2] = 1
 
     # distortion coefficients
@@ -24,6 +24,7 @@ for i in range(nCam):
 
     # rotation matrix
     rotMat = np.reshape(camParam[9:18], (3,3))
+    # rotMat[1,:] = -rotMat[1,:]
 
     # inverse of rotation matrix
     rotMatInv = np.linalg.inv(rotMat)
@@ -33,6 +34,7 @@ for i in range(nCam):
 
     # translation vector 
     transVec = np.reshape(camParam[18:21], (3,1))
+    # transVec[1,0] = -transVec[1,0]
 
     # inverse of translation vector
     transVecInv = - rotMatInv @ transVec

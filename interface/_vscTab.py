@@ -16,20 +16,24 @@ def showVSC(callbacks):
             with dpg.file_dialog(directory_selector=False, file_count=20, min_size=[400,300], show=False, tag='file_dialog_vscImg', callback=callbacks.Vsc.openImgFile, cancel_callback=callbacks.Vsc.cancelImgImportFile):
                 dpg.add_file_extension("", color=(150, 255, 150, 255))
                 dpg.add_file_extension(".txt", color=(0, 255, 255, 255))
+                
             
             dpg.add_text('1. Import Camera Files')
             dpg.add_button(tag='import_VscCam', label='Import Camera Files', callback=lambda: dpg.show_item("file_dialog_vscCam"))
+            dpg.add_text('Status: --', tag='vscCamStatus')
             dpg.add_separator()
             
             dpg.add_text('2. Import Image Files')
             dpg.add_button(tag='import_VscImg', label='Import Image Files', callback=lambda: dpg.show_item("file_dialog_vscImg"))
+            dpg.add_text('Status: --', tag='vscImgStatus')
             dpg.add_separator()
             
             dpg.add_text('3. Import Tracks File')
             dpg.add_button(tag='import_VscTracks', label='Import Tracks File', callback=lambda: dpg.show_item("file_dialog_vscTracks"))
+            dpg.add_text('Status: --', tag='vscTracksStatus')
             dpg.add_separator()
             
-            
+
             dpg.add_text('4. Volume Self Calibration')
             dpg.add_text('Tracks fitting threshold: (view volume size / 1000)')
             dpg.add_input_float(tag='inputVscGoodTracksThreshold', default_value=0.04)
@@ -37,24 +41,41 @@ def showVSC(callbacks):
             dpg.add_input_int(tag='inputVscNumParticles', default_value=4000)
             dpg.add_text('Particle Radius: [pix]')
             dpg.add_input_int(tag='inputVscParticleRadius', default_value=4)
-            
+            dpg.add_text('Triangulation Threshold: [physical unit]')
+            dpg.add_input_float(tag='inputVscTriangulationThreshold', default_value=2.5)
+            dpg.add_text('Select fix cameras')
+            with dpg.table(header_row=True, policy=dpg.mvTable_SizingFixedFit, row_background=True,
+                resizable=True, no_host_extendX=False, hideable=True,
+                borders_innerV=True, delay_search=True, borders_outerV=True, borders_innerH=True,
+                borders_outerH=True, tag='vscCamFixTable'):
+                    dpg.add_table_column(label='Cam Name', width_fixed=True)
+                    dpg.add_table_column(label='Fix', width_fixed=True)
+            dpg.add_text('Input max iterations:')
+            dpg.add_input_int(tag='inputVscMaxIterations', default_value=20)
+            dpg.add_text('Input number of parallel threads:')
+            dpg.add_input_int(tag='inputVscNumThreads', default_value=10)
+            dpg.add_text('Input convergence tolerance:')
+            dpg.add_input_float(tag='inputVscTolerance', default_value=1e-6, format='%.3e')
             dpg.add_button(label='Run VSC', callback=callbacks.Vsc.runVsc)
+            dpg.add_text('Status: --', tag='vscStatus')
+            dpg.add_text('Current Iteration: --', tag='vscCurrentIter', show=False)
+            dpg.add_text('Current Cost: --', tag='vscCurrentCost', show=False)
             dpg.add_separator()
                    
-                   
-                   
-            ############################     
-            dpg.add_button(tag="buttonExportVsc",label='Export VSC Outputs', callback=lambda: dpg.show_item("exportVsc"), show=False)     
+            with dpg.group(tag='vscExportParent', show=False):  
+                dpg.add_text('5. Export VSC Outputs')  
+                dpg.add_button(tag="buttonExportVsc",label='Export VSC Outputs', callback=lambda: dpg.show_item("exportVsc"), show=True)   
+                  
             with dpg.window(label="Save Files", modal=False, show=False, tag="exportVsc", no_title_bar=False, min_size=[600,255]):
-                dpg.add_text("Name your file")
-                dpg.add_input_text(tag='inputVscFileText')
+                dpg.add_text("Name your camera file prefix")
+                dpg.add_input_text(tag='inputVscFilePrefix', default_value='VSC_')
                 dpg.add_separator()
                 dpg.add_text("You MUST enter a File Name to select a directory")
                 dpg.add_button(label='Select the directory', width=-1, callback=lambda: dpg.show_item("folderExportVsc"))
                 dpg.add_file_dialog(directory_selector=True, min_size=[400,300], show=False, tag='folderExportVsc', id="folderExportVsc", callback=callbacks.Vsc.selectFolder)
                 dpg.add_separator()
-                dpg.add_text('File Default Name: ', tag='exportVscFileName')
-                dpg.add_text('Complete Path Name: ', tag='exportVscPathName')
+                dpg.add_text('Folder: ', tag='exportVscFolderName')
+                dpg.add_text('Prefix: ', tag='exportVscPrefixName')
 
                 with dpg.group(horizontal=True):
                     dpg.add_button(label='Save', width=-1, callback=callbacks.Vsc.exportVsc)
@@ -69,7 +90,7 @@ def showVSC(callbacks):
                 dpg.add_text("ERROR: You must import at least 2 cameras.")
                 dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("noVscCam", show=False))
         
-        with dpg.child_window(tag='vscOutputParent'):
+        with dpg.child_window(tag='vscOutputParent', horizontal_scrollbar=True):
             
             dpg.add_text('VSC Outputs')
             dpg.add_separator()
@@ -126,6 +147,22 @@ def showVSC(callbacks):
                     dpg.add_table_column(label='WorldX', width_fixed=True)
                     dpg.add_table_column(label='WorldY', width_fixed=True)
                     dpg.add_table_column(label='WorldZ', width_fixed=True)
+                    
+            dpg.add_separator()
+            with dpg.group(show=False, tag='vscOptParamParent'):
+                dpg.add_text('Optimized Results:')
+                dpg.add_text('Initial Cost: --', tag='vscInitialCost')
+                dpg.add_text('Final Cost: --', tag='vscFinalCost')
+                with dpg.table(header_row=True, policy=dpg.mvTable_SizingFixedFit, row_background=True,
+                resizable=True, no_host_extendX=False, hideable=True,
+                borders_innerV=True, delay_search=True, borders_outerV=True, borders_innerH=True,
+                borders_outerH=True, tag='vscCamParamOptTable'):
+                    dpg.add_table_column(label='Cam Name', width_fixed=True)
+                    dpg.add_table_column(label='RotMat', width_fixed=True)
+                    dpg.add_table_column(label='TransVec', width_fixed=True)
+                    
+            dpg.add_separator()
+            dpg.add_text('Export path: --', tag='vscExportFolder', show=False)
                 
             
                     

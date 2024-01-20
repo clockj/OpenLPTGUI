@@ -189,6 +189,11 @@ class OpencvCalib:
         dpg.set_value('exportOpencvPathName', 'Complete Path Name: ' + filePath)
     
     def exportOpencvCalib(self, sender = None, app_data = None):
+        if self.exportFilePath is None:
+            dpg.configure_item('exportOpencvCalibError', show=True)
+            return
+        
+        dpg.configure_item('exportOpencvCalibError', show=False)
         filePath = os.path.join(self.exportFilePath, self.exportFileName)
         
         with open(filePath, 'w') as f:
