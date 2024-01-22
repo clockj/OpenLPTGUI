@@ -4,7 +4,7 @@ def showOpenCVCalib(callbacks):
     with dpg.group(horizontal=True):
         with dpg.child_window(width=300,horizontal_scrollbar=True):
             
-            with dpg.file_dialog(directory_selector=False, min_size=[400,300], show=False, file_count=20, tag='file_dialog_opencvCamCalib', callback=callbacks.OpencvCalib.openCamcalibFile, cancel_callback=callbacks.OpencvCalib.cancelCamcalibImportFile):
+            with dpg.file_dialog(directory_selector=False, min_size=[400,300], show=False, file_count=20, tag='file_dialog_opencvCamCalib', callback=callbacks.opencvCalib.openCamcalibFile, cancel_callback=callbacks.opencvCalib.cancelCamcalibImportFile):
                 dpg.add_file_extension("", color=(150, 255, 150, 255))
                 dpg.add_file_extension(".csv", color=(0, 255, 255, 255))
                 dpg.add_file_extension(".txt", color=(0, 255, 255, 255))
@@ -23,14 +23,14 @@ def showOpenCVCalib(callbacks):
                 dpg.add_text('Image Height')
                 dpg.add_input_int(tag='inputOpencvCamHeight', default_value=800)
                 
-            dpg.add_button(tag='calibrate_OpencvCalibCam', label='Run Calibration', callback=callbacks.OpencvCalib.calibrateCamera)
+            dpg.add_button(tag='calibrate_OpencvCalibCam', label='Run Calibration', callback=callbacks.opencvCalib.calibrateCamera)
             
             dpg.add_separator()
             
             with dpg.group(tag='OpenCV Calibrate Pose Parameters',show=False):
                 dpg.add_text('2. Calibrate Pose Parameters')
                 
-                with dpg.file_dialog(directory_selector=False, min_size=[400,300], show=False, file_count=20, tag='file_dialog_opencvPoseCalib', callback=callbacks.OpencvCalib.openPoseCalibFile, cancel_callback=callbacks.OpencvCalib.cancelPoseCalibImportFile):
+                with dpg.file_dialog(directory_selector=False, min_size=[400,300], show=False, file_count=20, tag='file_dialog_opencvPoseCalib', callback=callbacks.opencvCalib.openPoseCalibFile, cancel_callback=callbacks.opencvCalib.cancelPoseCalibImportFile):
                     dpg.add_file_extension("", color=(150, 255, 150, 255))
                     dpg.add_file_extension(".csv", color=(0, 255, 255, 255))
                     dpg.add_file_extension(".txt", color=(0, 255, 255, 255))
@@ -38,7 +38,7 @@ def showOpenCVCalib(callbacks):
                 dpg.add_button(tag='import_OpencvCalibPose', label='Import Files', callback=lambda: dpg.show_item("file_dialog_opencvPoseCalib"))
                 dpg.add_text('Select an optimization method')
                 dpg.add_listbox(tag='opencvPoseOptMethod', items=['SOLVEPNP_ITERATIVE', 'SOLVEPNP_EPNP', 'SOLVEPNP_IPPE','SOLVEPNP_SQPNP'])
-                dpg.add_button(tag='calibrate_OpencvCalibPose', label='Run Calibration', callback=callbacks.OpencvCalib.calibratePose)
+                dpg.add_button(tag='calibrate_OpencvCalibPose', label='Run Calibration', callback=callbacks.opencvCalib.calibratePose)
             
             dpg.add_separator()
             
@@ -51,13 +51,13 @@ def showOpenCVCalib(callbacks):
                 dpg.add_separator()
                 dpg.add_text("You MUST enter a File Name to select a directory")
                 dpg.add_button(label='Select the directory', width=-1, callback=lambda: dpg.show_item("folderExportOpencvCalib"))
-                dpg.add_file_dialog(directory_selector=True, min_size=[400,300], show=False, tag='folderExportOpencvCalib', id="folderExportOpencvCalib", callback=callbacks.OpencvCalib.selectFolder)
+                dpg.add_file_dialog(directory_selector=True, min_size=[400,300], show=False, tag='folderExportOpencvCalib', id="folderExportOpencvCalib", callback=callbacks.opencvCalib.selectFolder)
                 dpg.add_separator()
                 dpg.add_text('File Default Name: ', tag='exportOpencvFileName')
                 dpg.add_text('Complete Path Name: ', tag='exportOpencvPathName')
 
                 with dpg.group(horizontal=True):
-                    dpg.add_button(label='Save', width=-1, callback=callbacks.OpencvCalib.exportOpencvCalib)
+                    dpg.add_button(label='Save', width=-1, callback=callbacks.opencvCalib.exportOpencvCalib)
                     dpg.add_button(label='Cancel', width=-1, callback=lambda: dpg.configure_item('exportOpencvCalib', show=False))
                 dpg.add_text("Missing file name or directory.", tag="exportOpencvCalibError", show=False)
             

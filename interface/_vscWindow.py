@@ -4,16 +4,16 @@ def showVSC(callbacks):
     with dpg.group(horizontal=True):
         with dpg.child_window(width=300,horizontal_scrollbar=True):
             
-            with dpg.file_dialog(directory_selector=False, min_size=[400,300], show=False, file_count=20, tag='file_dialog_vscCam', callback=callbacks.Vsc.openCamFile, cancel_callback=callbacks.Vsc.cancelCamImportFile):
+            with dpg.file_dialog(directory_selector=False, min_size=[400,300], show=False, file_count=20, tag='file_dialog_vscCam', callback=callbacks.vsc.openCamFile, cancel_callback=callbacks.vsc.cancelCamImportFile):
                 dpg.add_file_extension("", color=(150, 255, 150, 255))
                 dpg.add_file_extension(".txt", color=(0, 255, 255, 255))
                 
-            with dpg.file_dialog(directory_selector=False, min_size=[400,300], show=False, tag='file_dialog_vscTracks', callback=callbacks.Vsc.openTracksFile, cancel_callback=callbacks.Vsc.cancelTracksImportFile):
+            with dpg.file_dialog(directory_selector=False, min_size=[400,300], show=False, tag='file_dialog_vscTracks', callback=callbacks.vsc.openTracksFile, cancel_callback=callbacks.vsc.cancelTracksImportFile):
                 dpg.add_file_extension("", color=(150, 255, 150, 255))
                 dpg.add_file_extension(".csv", color=(0, 255, 255, 255))
                 dpg.add_file_extension(".txt", color=(0, 255, 255, 255))
             
-            with dpg.file_dialog(directory_selector=False, file_count=20, min_size=[400,300], show=False, tag='file_dialog_vscImg', callback=callbacks.Vsc.openImgFile, cancel_callback=callbacks.Vsc.cancelImgImportFile):
+            with dpg.file_dialog(directory_selector=False, file_count=20, min_size=[400,300], show=False, tag='file_dialog_vscImg', callback=callbacks.vsc.openImgFile, cancel_callback=callbacks.vsc.cancelImgImportFile):
                 dpg.add_file_extension("", color=(150, 255, 150, 255))
                 dpg.add_file_extension(".txt", color=(0, 255, 255, 255))
                 
@@ -56,7 +56,7 @@ def showVSC(callbacks):
             dpg.add_input_int(tag='inputVscNumThreads', default_value=10)
             dpg.add_text('Input convergence tolerance:')
             dpg.add_input_float(tag='inputVscTolerance', default_value=1e-6, format='%.3e')
-            dpg.add_button(label='Run VSC', callback=callbacks.Vsc.runVsc)
+            dpg.add_button(label='Run VSC', callback=callbacks.vsc.runVsc)
             dpg.add_text('Status: --', tag='vscStatus')
             dpg.add_text('Current Iteration: --', tag='vscCurrentIter', show=False)
             dpg.add_text('Current Cost: --', tag='vscCurrentCost', show=False)
@@ -72,13 +72,13 @@ def showVSC(callbacks):
                 dpg.add_separator()
                 dpg.add_text("You MUST enter a File Name to select a directory")
                 dpg.add_button(label='Select the directory', width=-1, callback=lambda: dpg.show_item("folderExportVsc"))
-                dpg.add_file_dialog(directory_selector=True, min_size=[400,300], show=False, tag='folderExportVsc', id="folderExportVsc", callback=callbacks.Vsc.selectFolder)
+                dpg.add_file_dialog(directory_selector=True, min_size=[400,300], show=False, tag='folderExportVsc', id="folderExportVsc", callback=callbacks.vsc.selectFolder)
                 dpg.add_separator()
                 dpg.add_text('Folder: ', tag='exportVscFolderName')
                 dpg.add_text('Prefix: ', tag='exportVscPrefixName')
 
                 with dpg.group(horizontal=True):
-                    dpg.add_button(label='Save', width=-1, callback=callbacks.Vsc.exportVsc)
+                    dpg.add_button(label='Save', width=-1, callback=callbacks.vsc.exportVsc)
                     dpg.add_button(label='Cancel', width=-1, callback=lambda: dpg.configure_item('exportVsc', show=False))
                 dpg.add_text("Missing file name or directory.", tag="exportVscError", show=False)
             

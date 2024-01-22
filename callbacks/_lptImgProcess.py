@@ -1,12 +1,11 @@
 import dearpygui.dearpygui as dpg
 import numpy as np
 import cv2
-import pydicom
 import os.path
 from ._blocks import Blocks
 from ._texture import Texture
 
-class ImageProcessing:
+class LptImgProcess:
     def __init__(self) -> None:
 
         self.filePath = None
@@ -26,14 +25,6 @@ class ImageProcessing:
                 'tab': 'Processing'
             },
             {
-                'method': self.setAreaColor,
-                'name': self.setAreaColor.__name__,
-                'status': False,
-                'output': None,
-                'tab': 'Filtering',
-                'isFirst': True
-            },
-            {
                 'method': self.histogramEqualization,
                 'name': self.histogramEqualization.__name__,
                 'status': False,
@@ -48,44 +39,9 @@ class ImageProcessing:
                 'tab': 'Filtering'
             },
             {
-                'method': self.averageBlur,
-                'name': self.averageBlur.__name__,
-                'status': False,
-                'output': None,
-                'tab': 'Filtering'
-            },
-            {
-                'method': self.gaussianBlur,
-                'name': self.gaussianBlur.__name__,
-                'status': False,
-                'output': None,
-                'tab': 'Filtering'
-            },
-            {
-                'method': self.medianBlur,
-                'name': self.medianBlur.__name__,
-                'status': False,
-                'output': None,
-                'tab': 'Filtering'
-            },
-            {
                 'method': self.grayscale,
                 'name': self.grayscale.__name__,
                 'status': True,
-                'output': None,
-                'tab': 'Thresholding'
-            },
-            {
-                'method': self.laplacian,
-                'name': self.laplacian.__name__,
-                'status': False,
-                'output': None,
-                'tab': 'Thresholding'
-            },
-            {
-                'method': self.sobel,
-                'name': self.sobel.__name__,
-                'status': False,
                 'output': None,
                 'tab': 'Thresholding'
             },
@@ -191,19 +147,6 @@ class ImageProcessing:
         return lastActiveIndex
 
     def openImage(self, filePath):
-        # Check if image is .dcm or .dicom or other format
-        if filePath.endswith('.dcm') or filePath.endswith('.dicom'):
-            return self.openDicom(filePath)
-        return self.openOtherImage(filePath)
-
-    def openDicom(self, filePath):
-        ds = pydicom.dcmread(filePath)
-        pixelArray = ds.pixel_array
-        _, encodedImage = cv2.imencode('.jpg', pixelArray)
-        numpyarray = cv2.imdecode(encodedImage, cv2.IMREAD_COLOR)
-        return numpyarray
-    
-    def openOtherImage(self, filePath):
         stream = open(filePath, "rb")
         bytes = bytearray(stream.read())
         numpyarray = np.asarray(bytes, dtype=np.uint8)

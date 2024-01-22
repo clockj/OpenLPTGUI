@@ -6,7 +6,8 @@ from ._thresholdingTab import showThresholding
 from ._theme import applyTheme
 
 from ._camCalibWindow import showOpenCVCalib
-from ._vscTab import showVSC
+from ._vscWindow import showVSC
+from ._imgProcessWindow import showImgProcess
 
 class Interface:
 
@@ -31,15 +32,16 @@ class Interface:
             dpg.add_text('')
             
             dpg.add_text('3. Image Preprocessing (Optional)')
-            dpg.add_button(label='Run Preprocessing')
+            dpg.add_button(label='Run Preprocessing', callback=lambda: dpg.configure_item('imgProcess', show=True))
             dpg.add_text('')
             
-            dpg.add_text('4. Run Volume Self Calibration (Optional, suggested for few calibration points)')
+            dpg.add_text('4. Run OpenLPT')
+            dpg.add_button(label='Run OpenLPT')
+            dpg.add_text('')
+            
+            dpg.add_text('5. Run Volume Self Calibration (Optional, suggested for few calibration points)')
             dpg.add_button(label='Run VSC', callback=lambda: dpg.configure_item('vsc', show=True))
             dpg.add_text('')
-            
-            dpg.add_text('5. Run OpenLPT')
-            dpg.add_button(label='Run OpenLPT')
             
             
             
@@ -59,6 +61,10 @@ class Interface:
         with dpg.window(tag="vsc", show=False, width=800, height=400, label='Volume Self Calibration'):
             applyTheme()
             showVSC(self.callbacks)
+            
+        with dpg.window(tag="imgProcess", show=False, width=800, height=400, label='Image Processing'):
+            applyTheme()
+            showImgProcess(self.callbacks)
             
         dpg.setup_dearpygui()
         dpg.show_viewport()

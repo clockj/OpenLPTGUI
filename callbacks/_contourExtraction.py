@@ -6,14 +6,14 @@ import numpy as np
 import pandas as pd
 from ._texture import Texture
 from ._blocks import Blocks
-from ._imageProcessing import ImageProcessing
+from ._camCalibImgProcess import CamCalibImageProcess
 
 class ContourExtraction:
 
     def __init__(self) -> None:
 
         self.filePath = None
-        self.imageProcessing = ImageProcessing()
+        self.imageProcessing = CamCalibImageProcess()
         self.contourTableEntry = []
         self.contourCenters = []
         self.exportFilePath = None
