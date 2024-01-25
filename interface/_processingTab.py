@@ -51,4 +51,3 @@ def showProcessing(callbacks):
                 dpg.add_plot_legend()
                 dpg.add_plot_axis(dpg.mvXAxis, label="x", tag="Processing_x_axis")
                 dpg.add_plot_axis(dpg.mvYAxis, label="y", tag="Processing_y_axis")
-            pass

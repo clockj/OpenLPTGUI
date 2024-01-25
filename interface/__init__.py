@@ -65,6 +65,7 @@ class Interface:
         with dpg.window(tag="imgProcess", show=False, width=800, height=400, label='Image Processing'):
             applyTheme()
             showImgProcess(self.callbacks)
+            self.callbacks.lptImgProcess.disableAllTags()
             
         dpg.setup_dearpygui()
         dpg.show_viewport()

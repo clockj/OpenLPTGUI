@@ -9,4 +9,5 @@ class Callbacks:
         self.imageProcessing = self.contourExtraction.imageProcessing
         self.opencvCalib = OpencvCalib()
         self.vsc = Vsc()
+        self.lptImgProcess = LptImgProcess()
         

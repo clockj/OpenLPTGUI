@@ -462,7 +462,7 @@ class Vsc:
         for keys, values in selections.items():
             if os.path.isfile(values) is False:
                 dpg.configure_item('noVscPath', show=True)
-                dpg.add_text('Wrong path:')
+                dpg.add_text('Wrong path:', parent='noVscPath')
                 dpg.add_text(values, parent='noVscPath')
                 return
             self.camFilePath.append(values)
@@ -557,7 +557,7 @@ class Vsc:
         
         if os.path.isfile(self.tracksFilePath) is False:
             dpg.configure_item('noVscPath', show=True)
-            dpg.add_text('Wrong path:')
+            dpg.add_text('Wrong path:', parent='noVscPath')
             dpg.add_text(self.tracksFilePath, parent='noVscPath')
             return
                     
@@ -595,9 +595,6 @@ class Vsc:
         dpg.hide_item('file_dialog_vscTracks')
     
     def openImgFile(self, sender=None, app_data=None):
-        self.imgFilePath = []
-        self.imgFileName = []
-        
         selections = app_data['selections']
         if len(selections) == 0:
             dpg.configure_item('noVscPath', show=True)
@@ -608,10 +605,12 @@ class Vsc:
             dpg.add_text('The number of selected files does not match the number of cameras', parent='noVscPath')
             return
         
+        self.imgFilePath = []
+        self.imgFileName = []
         for keys, values in selections.items():
             if os.path.isfile(values) is False:
                 dpg.configure_item('noVscPath', show=True)
-                dpg.add_text('Wrong path:')
+                dpg.add_text('Wrong path:', parent='noVscPath')
                 dpg.add_text(values, parent='noVscPath')
                 return
             self.imgFilePath.append(values)

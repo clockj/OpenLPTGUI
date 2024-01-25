@@ -1,140 +1,180 @@
 import dearpygui.dearpygui as dpg
 import numpy as np
 import cv2
-import os.path
-from ._blocks import Blocks
+import os
 from ._texture import Texture
+import enum
+from multiprocessing import Pool
+import itertools
+
+class Blocks(enum.Enum):
+    __order__ = 'importImg invertImg removeBkg brightnessAndContrast imAdjust labvision'
+    importImg = 0
+    invertImg = 1
+    removeBkg = 2
+    brightnessAndContrast = 3
+    imAdjust = 4
+    labvision = 5
+
 
 class LptImgProcess:
     def __init__(self) -> None:
-
-        self.filePath = None
-        self.fileName = None
-        self.exportImageFilePath = None
-        self.currentTab = None
+        # import
+        self.camName = []
+        self.imgFileName = []
+        self.imgFilePath = []
+        self.nFrame = []
         
         self.height = None
         self.width = None
-
+        
+        # image maximum intensity dictionary 
+        self.imgBitDepth = {'uint8':255, 'uint16':65535, 'uint32':4294967295}
+        
+        # block 
         self.blocks = [
             {
-                'method': self.importImage,
-                'name': self.importImage.__name__,
+                'method': self.importImg,
+                'name': self.importImg.__name__,
                 'status': True,
                 'output': None,
-                'tab': 'Processing'
             },
             {
-                'method': self.histogramEqualization,
-                'name': self.histogramEqualization.__name__,
+                'method': self.invertImg,
+                'name': self.invertImg.__name__,
+                'status': False,
+                'output': None,  
+            },
+            {
+                'method': self.removeBkg,
+                'name': self.removeBkg.__name__,
                 'status': False,
                 'output': None,
-                'tab': 'Filtering'
             },
             {
                 'method': self.brightnessAndContrast,
                 'name': self.brightnessAndContrast.__name__,
                 'status': False,
                 'output': None,
-                'tab': 'Filtering'
             },
             {
-                'method': self.grayscale,
-                'name': self.grayscale.__name__,
-                'status': True,
-                'output': None,
-                'tab': 'Thresholding'
-            },
-            {
-                'method': self.globalThresholding,
-                'name': self.globalThresholding.__name__,
+                'method': self.imAdjust,
+                'name': self.imAdjust.__name__,
                 'status': False,
                 'output': None,
-                'tab': 'Thresholding'
             },
             {
-                'method': self.adaptativeMeanThresholding,
-                'name': self.adaptativeMeanThresholding.__name__,
+                'method': self.labvision,
+                'name': self.labvision.__name__,
                 'status': False,
                 'output': None,
-                'tab': 'Thresholding'
-            },
-            {
-                'method': self.adaptativeGaussianThresholding,
-                'name': self.adaptativeGaussianThresholding.__name__,
-                'status': False,
-                'output': None,
-                'tab': 'Thresholding'
-            },
-            {
-                'method': self.otsuBinarization,
-                'name': self.otsuBinarization.__name__,
-                'status': False,
-                'output': None,
-                'tab': 'Thresholding'
-            },
-            {
-                'method': self.findContour,
-                'name': self.findContour.__name__,
-                'status': True,
-                'output': None,
-                'tab': 'ContourExtraction'
             },
         ]
+        
+        # checkbox
+        self.checkboxes = [
+            'lptInvertImgCheckbox',
+            'lptRemoveBkgCheckbox',
+            'lptBrightnessAndContrastCheckbox',
+            'lptImAdjustCheckbox',
+            'lptLabvisionCheckbox'
+        ]
+        
+        # export 
+        self.exportFolderPath = None
 
-        pass
+    def enableAllTags(self):
+        for checkbox in self.checkboxes:
+            dpg.configure_item(checkbox, enabled=True)
 
+    def disableAllTags(self):
+        for checkbox in self.checkboxes:
+            dpg.configure_item(checkbox, enabled=False)
 
-    def executeQuery(self, methodName):
-        executeFlag = 0
-        for entry in self.blocks:
-            if executeFlag == 0 and entry['name'] == methodName:
-                executeFlag = 1
-            if executeFlag == 1 and entry['status'] is True:
-                entry['method']()
-        try:
-            dpg.get_item_callback("removeExtractContour")()
-        except:
-            pass
+    def uncheckAllTags(self):
+        for checkbox in self.checkboxes:
+            dpg.set_value(checkbox, False)
+    
+    def openImgFile(self, sender=None, app_data=None):
+        selections = app_data['selections']
+        if len(selections) == 0:
+            dpg.configure_item('noLptImgPath', show=True)
+            dpg.add_text('No file selected', parent='noLptImgPath')
+            return
+        
+        self.imgFilePath = []
+        self.imgFileName = []
+        self.camName = []
+        self.nFrame = []
+        for keys, values in selections.items():
+            if os.path.isfile(values) is False:
+                dpg.configure_item('noLptImgPath', show=True)
+                dpg.add_text('Wrong path:', parent='noLptImgPath')
+                dpg.add_text(values, parent='noLptImgPath')
+                return
+            self.imgFilePath.append(values)
+            with open(values, 'r') as f:
+                lines = f.readlines()
+                self.nFrame.append(len(lines))
+            self.imgFileName.append(keys)
+            self.camName.append(keys.replace('ImageNames.txt',''))
+        
+        # configurate listbox for selecting sample image 
+        dpg.configure_item('lptImgShowID', items=self.camName)
+        self.importImg()
+        
+        # enable all tags
+        self.enableAllTags()
+        
+        # update output table
+        for tag in dpg.get_item_children('lptImgFileTable')[1]:
+            dpg.delete_item(tag)
+            
+        for i in range(len(self.imgFileName)):
+            with dpg.table_row(parent='lptImgFileTable'):
+                dpg.add_text(self.camName[i])
+                dpg.add_text(self.imgFileName[i])
+                dpg.add_text(str(self.nFrame[i]) + f', ID: 0~{self.nFrame[i]-1}')
+                dpg.add_text(self.imgFilePath[i])
 
-    def executeQueryFromNext(self, methodName):
-        executeFlag = 0
-        for entry in self.blocks:
-            if executeFlag == 0 and entry['name'] == methodName:
-                executeFlag = 1
-                continue
-            if executeFlag == 1 and entry['status'] is True:
-                entry['method']()
-        try:
-            dpg.get_item_callback("removeExtractContour")()
-        except:
-            pass
+    def cancelImgImportFile(self, sender = None, app_data = None):
+        dpg.hide_item("file_dialog_imgprocess")
 
-    def toggleAndExecuteQuery(self, methodName, sender = None, app_data = None):
-        self.toggleEffect(methodName, sender, app_data)
-        if dpg.get_value(sender) is True:
-            self.executeQuery(methodName)
-        else:
-            if methodName == 'setAreaColor':
-                self.blocks[self.getIdByMethod(methodName)]['isFirst'] = True
-            self.retrieveFromLastActive(methodName, sender, app_data)
-            self.executeQueryFromNext(methodName)
-        try:
-            dpg.get_item_callback("removeExtractContour")()
-        except:
-            pass
+    def importImg(self, sender = None, app_data = None):
+        # load image path 
+        camName = dpg.get_value('lptImgShowID')
+        camID = self.camName.index(camName)
+        frameID = dpg.get_value('lptImgFrameID')
+        with open(self.imgFilePath[camID], 'r') as f:
+            lines = f.readlines()
+            imgPath = lines[frameID].replace('\n','')
+        
+        self.blocks[Blocks.importImg.value]['output'] = cv2.imread(imgPath, cv2.IMREAD_ANYDEPTH)
+        shape = self.blocks[Blocks.importImg.value]['output'].shape
+        self.height = shape[0]
+        self.width = shape[1]
+        
+        # update sample image
+        Texture.createTexture('lptImgProcess', self.blocks[Blocks.importImg.value]['output'])
+        
+        # uncheck all selected effects 
+        self.uncheckAllTags()
+                
+        # update background subtraction frame number
+        dpg.configure_item('lptRemoveBkgFrameNum', default_value=min(1000, self.nFrame[camID]))
+        if self.nFrame[camID] < 1000:
+            dpg.configure_item('lptRemoveBkgFrameStep', default_value=1)
+        
+        # update imadjust slider 
+        maxIntensity = self.imgBitDepth[self.blocks[Blocks.importImg.value]['output'].dtype.name]
+        dpg.configure_item('lptImAdjustRange', max_value=maxIntensity, default_value=maxIntensity)
+        
+        # update labvision filter size slider
+        dpg.configure_item('lptFilterSizeSlider', max_value=min(self.height, self.width))
 
-    def getIdByMethod(self, methodName):
-        id = 0
-        for entry in self.blocks:
-            if entry['name'] == methodName:
-                return id
-            id += 1
-
-    def retrieveFromLastActive(self, methodName, sender = None, app_data = None):
-        self.blocks[self.getIdByMethod(methodName)]['output'] = self.blocks[self.getLastActiveBeforeMethod(methodName)]['output'].copy()
-        Texture.updateTexture(self.blocks[self.getIdByMethod(methodName)]['tab'], self.blocks[self.getIdByMethod(methodName)]['output'])
-
+        dpg.set_value('lptImgSampleName', 'Sample Image: ' + imgPath.split(os.sep)[-1])
+        dpg.set_value('lptImgSampleSize', '(Height, Width) = (' + str(self.height) + ', ' + str(self.width) + ')')
+     
     def getLastActiveBeforeMethod(self, methodName):
         lastActiveIndex = 0
         lastActive = 0
@@ -145,380 +185,272 @@ class LptImgProcess:
                 lastActiveIndex = lastActive 
             lastActive += 1
         return lastActiveIndex
-
-    def openImage(self, filePath):
-        stream = open(filePath, "rb")
-        bytes = bytearray(stream.read())
-        numpyarray = np.asarray(bytes, dtype=np.uint8)
-        bgrImage = cv2.imdecode(numpyarray, cv2.IMREAD_COLOR)
-        return bgrImage
-
-    def openFile(self, sender = None, app_data = None):
-        self.filePath = app_data['file_path_name']
-        self.fileName = app_data['file_name']
-
-        if os.path.isfile(self.filePath) is False:
-            dpg.configure_item('noPath', show=True)
-            return
-
-        dpg.set_value("brightnessSlider",0)
-        dpg.set_value("contrastSlider",1)
-        dpg.set_value("averageBlurSlider",1)
-        dpg.set_value("gaussianBlurSlider",1)
-        dpg.set_value("medianBlurSlider",1)
-        dpg.set_value("laplacianSlider",1)
-        dpg.set_value("globalThresholdSlider",127)
-        
-        try:
-            dpg.get_item_callback("removeExtractContour")()
-        except:
-            pass
-        self.uncheckAllTags()
-        for entry in self.blocks[1:-1]:
-            if entry['name'] != self.grayscale.__name__:
-                entry['status'] = False
-        self.executeQuery('importImage')
-        self.enableAllTags()
-        pass
-
-    def cancelImportImage(self, sender = None, app_data = None):
-        dpg.hide_item("file_dialog_id")
-        pass
-
+    
     def toggleEffect(self, methodName, sender = None, app_data = None):
         for entry in self.blocks:
             if entry['name'] == methodName:
                 entry['status'] = dpg.get_value(sender)
-        pass
-
-    def importImage(self, sender = None, app_data = None):
-        self.blocks[Blocks.importImage.value]['output'] = self.openImage(self.filePath)
-
-        Texture.createAllTextures(self.blocks[Blocks.importImage.value]['output'])
-
-        dpg.set_value('file_name_text', 'File Name: ' + self.fileName)
-        dpg.set_value('file_path_text', 'File Path: ' + self.filePath)
-
-        shape = self.blocks[Blocks.importImage.value]['output'].shape
-        self.height = shape[0]
-        self.width = shape[1]
-
-        dpg.set_value('imgWidth', 'Width: ' + str(shape[1]) + 'px')
-        dpg.set_value('imgHeight', 'Height: ' + str(shape[0]) + 'px')
-
-        dpg.configure_item("exportImageAsFileProcessingGroup", show=True)
-        dpg.configure_item("exportImageAsFileFilteringGroup", show=True)
-        dpg.configure_item("exportImageAsFileThresholdingGroup", show=True)
-        pass
-
-    def setAreaColor(self, sender=None, app_data=None):
-        if self.blocks[Blocks.setAreaColor.value]['isFirst']:
-            img = self.blocks[self.getLastActiveBeforeMethod('setAreaColor')]['output'].copy()
-            self.blocks[Blocks.setAreaColor.value]['isFirst'] = False
-            self.blocks[Blocks.setAreaColor.value]['output'] = img
+    
+    def executeQuery(self, methodName):
+        executeFlag = 0
+        for entry in self.blocks:
+            if executeFlag == 0 and entry['name'] == methodName:
+                executeFlag = 1
+            if executeFlag == 1 and entry['status'] is True:
+                entry['method']()
+    
+    def executeQueryFromNext(self, methodName):
+        executeFlag = 0
+        for entry in self.blocks:
+            if executeFlag == 0 and entry['name'] == methodName:
+                executeFlag = 1
+                continue
+            if executeFlag == 1 and entry['status'] is True:
+                entry['method']()
+    
+    def getIdByMethod(self, methodName):
+        id = 0
+        for entry in self.blocks:
+            if entry['name'] == methodName:
+                return id
+            id += 1
+    
+    def retrieveFromLastActive(self, methodName, sender = None, app_data = None):
+        self.blocks[self.getIdByMethod(methodName)]['output'] = self.blocks[self.getLastActiveBeforeMethod(methodName)]['output'].copy()
+        Texture.updateTexture('lptImgProcess', self.blocks[self.getIdByMethod(methodName)]['output'])
+        
+    def toggleAndExecuteQuery(self, methodName, sender = None, app_data = None):
+        self.toggleEffect(methodName, sender, app_data)
+        if dpg.get_value(sender) is True:
+            if methodName == 'removeBkg':
+                return
+            self.executeQuery(methodName)
         else:
-            img = self.blocks[Blocks.setAreaColor.value]['output']
-        
-            region = dpg.get_plot_query_area(plot="FilteringPlotParent") 
+            self.retrieveFromLastActive(methodName, sender, app_data)
+            self.executeQueryFromNext(methodName)
+    
+    def invertImg(self, sender=None, app_data=None):
+        image = self.blocks[self.getLastActiveBeforeMethod('invertImg')]['output']
+        invertFlag = dpg.get_value('lptInvertImgCheckbox')
+       
+        if invertFlag is True:
+            outputImage = self.invertImgfunc(image)
+        else:
+            outputImage = image
             
-            colMin = int(region[0])   
-            colMax = int(region[1])
-            rowMax = int(self.height - region[2])
-            rowMin = int(self.height - region[3])
-            if rowMin != rowMax or colMin != colMax:
-                img[rowMin:rowMax, colMin:colMax, 0] = int(dpg.get_value('areaColorPicker')[2])
-                img[rowMin:rowMax, colMin:colMax, 1] = int(dpg.get_value('areaColorPicker')[1])
-                img[rowMin:rowMax, colMin:colMax, 2] = int(dpg.get_value('areaColorPicker')[0])
-            
-            self.blocks[Blocks.setAreaColor.value]['output'] = img
-            Texture.updateTexture(self.blocks[Blocks.setAreaColor.value]['tab'], img)
-        pass
+        self.blocks[Blocks.invertImg.value]['output'] = outputImage
+        Texture.updateTexture('lptImgProcess', outputImage)
+    
+    def invertImgfunc(self, image):
+        return cv2.bitwise_not(image)
+     
+    def removeBkg(self, sender=None, app_data=None):
+        image = self.blocks[self.getLastActiveBeforeMethod('removeBkg')]['output']
         
-    def histogramEqualization(self, sender=None, app_data=None):
-
-        img_yuv = cv2.cvtColor(self.blocks[self.getLastActiveBeforeMethod('histogramEqualization')]['output'], cv2.COLOR_BGR2YUV)
-        img_yuv[:,:,0] = cv2.equalizeHist(img_yuv[:,:,0])
-        dst = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
-        self.blocks[Blocks.histogramEqualization.value]['output'] = dst
-        Texture.updateTexture(self.blocks[Blocks.histogramEqualization.value]['tab'], dst)
-        pass
-
+        camName = dpg.get_value('lptImgShowID')
+        camID = self.camName.index(camName)    
+        nFrameBkg = dpg.get_value('lptRemoveBkgFrameNum')
+        frameStep = dpg.get_value('lptRemoveBkgFrameStep')
+        
+        bkg = self.getBkgfunc(image, nFrameBkg, frameStep, camID)
+        outputImage = self.removeBkgfunc(image, bkg)
+        
+        self.blocks[Blocks.removeBkg.value]['output'] = outputImage
+        Texture.updateTexture('lptImgProcess', outputImage)
+    
+    def removeBkgfunc(self, image, bkg):        
+        outputImage = image - bkg
+        # outputImage = bkg - image
+        outputImage = np.maximum(outputImage, np.zeros(outputImage.shape))
+        outputImage = np.minimum(outputImage, self.imgBitDepth[image.dtype.name]*np.ones(outputImage.shape))
+        outputImage = image.dtype.type(outputImage)
+        return outputImage
+    
+    def getBkgfunc(self, image, nFrameBkg, frameStep, camID):
+        # get background image
+        # bkg: float
+        bkg = np.zeros(image.shape, dtype=np.float32)
+        num = 0
+        for i in range(0, nFrameBkg, frameStep):
+            with open(self.imgFilePath[camID], 'r') as f:
+                lines = f.readlines()
+                imgPath = lines[i].replace('\n','')
+            bkg += cv2.imread(imgPath, cv2.IMREAD_ANYDEPTH)
+            num += 1
+        bkg = bkg / num
+        return bkg
+    
     def brightnessAndContrast(self, sender=None, app_data=None):
-
         image = self.blocks[self.getLastActiveBeforeMethod('brightnessAndContrast')]['output']
-        alpha = dpg.get_value('contrastSlider')
-        beta = dpg.get_value('brightnessSlider')
-        outputImage = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
-
-        self.blocks[Blocks.brightnessAndContrast.value]['output'] = outputImage
-        Texture.updateTexture(self.blocks[Blocks.brightnessAndContrast.value]['tab'], outputImage)
-        pass
-
-    def averageBlur(self, sender=None, app_data=None):
-        image = self.blocks[self.getLastActiveBeforeMethod('averageBlur')]['output']
-
-        kernelSize = (2 * dpg.get_value('averageBlurSlider')) - 1
-        kernel = np.ones((kernelSize,kernelSize),np.float32)/(kernelSize*kernelSize)
-        dst = cv2.filter2D(image,-1,kernel)
-
-        self.blocks[Blocks.averageBlur.value]['output'] = dst
-        Texture.updateTexture(self.blocks[Blocks.averageBlur.value]['tab'], dst)
-        pass
-
-    def gaussianBlur(self, sender=None, app_data=None):
-        image = self.blocks[self.getLastActiveBeforeMethod('gaussianBlur')]['output']
-
-        kernelSize = (2 * dpg.get_value('gaussianBlurSlider')) - 1
-        dst = cv2.GaussianBlur(image, (kernelSize,kernelSize), 0)
-
-        self.blocks[Blocks.gaussianBlur.value]['output'] = dst
-        Texture.updateTexture(self.blocks[Blocks.gaussianBlur.value]['tab'], dst)
-        pass
-
-    def medianBlur(self, sender=None, app_data=None):
-        image = self.blocks[self.getLastActiveBeforeMethod('medianBlur')]['output']
-        kernel = (2 * dpg.get_value('medianBlurSlider')) - 1
-
-        median = cv2.medianBlur(image, kernel)
-
-        self.blocks[Blocks.medianBlur.value]['output'] = median
-        Texture.updateTexture(self.blocks[Blocks.medianBlur.value]['tab'], median)
-        pass
-
-    def grayscale(self, sender=None, app_data=None):
-
-        if self.blocks[self.getLastActiveBeforeMethod('grayscale')]['output'] is None:
-            return
-
-        image = self.blocks[self.getLastActiveBeforeMethod('grayscale')]['output'].copy()
-
-
-        excludeBlue = dpg.get_value('excludeBlueChannel')
-        excludeGreen = dpg.get_value('excludeGreenChannel')
-        excludeRed = dpg.get_value('excludeRedChannel')
-
-        if excludeBlue:
-            image[:, :, 0] = 0
-        if excludeGreen:
-            image[:, :, 1] = 0
-        if excludeRed:
-            image[:, :, 2] = 0
-
-        grayMask = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-        image[:, :, 0] = grayMask
-        image[:, :, 1] = grayMask
-        image[:, :, 2] = grayMask
-
-        self.blocks[Blocks.grayscale.value]['output'] = image
-        Texture.updateTexture(self.blocks[Blocks.grayscale.value]['tab'], image)
-        pass
-
-    def laplacian(self, sender=None, app_data=None):
-        image = self.blocks[Blocks.grayscale.value]['output'].copy()
-
-        kernelSize = (2 * dpg.get_value('laplacianSlider')) - 1
-        laplacian = cv2.Laplacian(image, cv2.CV_8U, ksize=kernelSize)
-                
-        self.blocks[Blocks.laplacian.value]['output'] = laplacian
-        Texture.updateTexture(self.blocks[Blocks.laplacian.value]['tab'], laplacian)
-        pass
-
-    def sobel(self, sender=None, app_data=None):
-        image = self.blocks[self.getLastActiveBeforeMethod('sobel')]['output']
-
-        sobel = None
-        value = dpg.get_value('sobelListbox')
-
-        if value == 'X-Axis':
-            sobel = cv2.Sobel(image, cv2.CV_8U, 1, 0, ksize=3)
-        elif value == 'Y-Axis':
-            sobel = cv2.Sobel(image, cv2.CV_8U, 0, 1, ksize=3)
-        elif value == 'XY-Axis':
-            sobel = cv2.bitwise_or(cv2.Sobel(image, cv2.CV_8U, 1, 0, ksize=3), cv2.Sobel(image, cv2.CV_8U, 0, 1, ksize=3))
-
-        self.blocks[Blocks.sobel.value]['output'] = sobel
-        Texture.updateTexture(self.blocks[Blocks.sobel.value]['tab'], sobel)
-        pass
-
-    def globalThresholding(self, sender=None, app_data=None):
-        image = self.blocks[self.getLastActiveBeforeMethod('globalThresholding')]['output']
-        threshold = dpg.get_value('globalThresholdSlider')
-
-        thresholdMode = cv2.THRESH_BINARY 
-        invertFlag = dpg.get_value('invertGlobalThresholding')
-        if invertFlag:
-            thresholdMode = cv2.THRESH_BINARY_INV
-
-        (T, threshInv) = cv2.threshold(image, threshold, 255, thresholdMode)
-
-        self.blocks[Blocks.globalThresholding.value]['output'] = threshInv
-        Texture.updateTexture(self.blocks[Blocks.globalThresholding.value]['tab'], threshInv)
-        pass
-
-    def adaptativeMeanThresholding(self, sender=None, app_data=None):
-        image = self.blocks[self.getLastActiveBeforeMethod('adaptativeMeanThresholding')]['output'].copy()
-
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        threshInv = cv2.adaptiveThreshold(image, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY,11,2)
-        image = cv2.cvtColor(threshInv, cv2.COLOR_GRAY2BGR)
-
-        self.blocks[Blocks.adaptativeMeanThresholding.value]['output'] = image
-        Texture.updateTexture(self.blocks[Blocks.adaptativeMeanThresholding.value]['tab'], image)
-
-        pass
-
-    def adaptativeGaussianThresholding(self, sender=None, app_data=None):
-
-        image = self.blocks[self.getLastActiveBeforeMethod('adaptativeGaussianThresholding')]['output'].copy()
-
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        threshInv = cv2.adaptiveThreshold(image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,11,2)
-        image = cv2.cvtColor(threshInv, cv2.COLOR_GRAY2BGR)
-
-        self.blocks[Blocks.adaptativeGaussianThresholding.value]['output'] = image
-        Texture.updateTexture(self.blocks[Blocks.adaptativeGaussianThresholding.value]['tab'], image)
-
-        pass
-
-    def otsuBinarization(self, sender=None, app_data=None):
-        image = self.blocks[self.getLastActiveBeforeMethod('adaptativeGaussianThresholding')]['output'].copy()
+        alpha = dpg.get_value('lptContrastSlider')
+        beta = dpg.get_value('lptBrightnessSlider')
         
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        ret, threshInv = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        threshInv = cv2.cvtColor(threshInv, cv2.COLOR_GRAY2BGR)
+        outputImage = self.brightnessAndContrastfunc(image, alpha, beta)
+        
+        self.blocks[Blocks.brightnessAndContrast.value]['output'] = outputImage
+        Texture.updateTexture('lptImgProcess', outputImage)
+    
+    def brightnessAndContrastfunc(self, image, alpha, beta):
+        return cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
+    
+    def imAdjust(self, sender=None, app_data=None):
+        image = self.blocks[self.getLastActiveBeforeMethod('imAdjust')]['output']
+        imadjustRange = dpg.get_value('lptImAdjustRange')
+        
+        outputImage = self.imAdjustfunc(image, imadjustRange)
+        
+        self.blocks[Blocks.imAdjust.value]['output'] = outputImage
+        Texture.updateTexture('lptImgProcess', outputImage)
+    
+    def imAdjustfunc(self, image, range):
+        outputImage = (image - np.min(image)) / (np.max(image) - np.min(image)) * range
+        outputImage = image.dtype.type(outputImage)
+        return outputImage
+    
+    def labvision(self, sender=None, app_data=None):
+        image = self.blocks[self.getLastActiveBeforeMethod('labvision')]['output']
+        sigma = dpg.get_value('lptGaussianBlurSlider')
+        kernelSize = dpg.get_value('lptFilterSizeSlider')
+        
+        outputImage = self.labvisionfunc(image, sigma, kernelSize)
+        
+        self.blocks[Blocks.labvision.value]['output'] = outputImage
+        Texture.updateTexture('lptImgProcess', outputImage)
+    
+    def labvisionfunc(self, image, sigma, kernelSize):
+        # subtrack sliding minimum
+        a = image.astype(np.float32)
+        b = cv2.erode(a, np.ones((3,3)))
+        c = a - b
+        b = cv2.erode(c, np.ones((3,3)))
+        c = c - b
 
+        # Gaussian smoothing filter
+        kernelSize = 2 * int(np.ceil(2 * sigma)) + 1
+        d = cv2.GaussianBlur(c, (kernelSize,kernelSize), sigma)
 
-        self.blocks[Blocks.otsuBinarization.value]['output'] = threshInv
-        Texture.updateTexture(self.blocks[Blocks.otsuBinarization.value]['tab'], threshInv)
-        pass
+        # image normalization
+        # kernelSize = 101
+        kernel = 1/(kernelSize**2) * np.ones((kernelSize,kernelSize))
+        e = cv2.filter2D(d,-1, kernel, borderType=cv2.BORDER_CONSTANT)
 
-    def findContour(self, sender=None, app_data=None):
+        f = a - e
 
-        if self.blocks[self.getLastActiveBeforeMethod('findContour')]['output'] is None:
-            return
-
-        image = self.blocks[self.getLastActiveBeforeMethod('findContour')]['output'].copy()
-        Texture.updateTexture(self.blocks[Blocks.findContour.value]['tab'], image)
-        pass
-
-    def exportImage(self, sender = None, app_data = None, tab = None):
-
-        dpg.set_value('exportImageFileName', 'File Name: ')
-        dpg.set_value('exportImageFilePath', 'Complete Path Name: ')
-        dpg.set_value('imageNameExportAsFile', '')
-        self.exportImageFilePath = None
-        self.currentTab = tab
-        dpg.configure_item('exportImageAsFile', show=True)
-        pass
-
-    def exportImageDirectorySelector(self, sender = None, app_data = None):
-        imageName = dpg.get_value('imageNameExportAsFile')
-        if imageName == '':
-            return
-        dpg.configure_item('exportImageAsFile', show=True)
-        dpg.configure_item('exportImageDirectorySelector', show=True)
-        pass
-
-    def exportImageSelectDirectory(self, sender = None, app_data = None):
-        exportImageFileName = dpg.get_value('imageNameExportAsFile')
-        exportImageFilePath = app_data['file_path_name']
-        self.exportImageFilePath = os.path.join(exportImageFilePath, exportImageFileName + '.jpg')
-        dpg.set_value('exportImageFileName', 'File Name: ' + exportImageFileName + '.jpg')
-        dpg.set_value('exportImageFilePath', 'File Path: ' + self.exportImageFilePath)
-        pass
-
-    def exportImageAsFile(self, sender = None, app_data = None):
-        if self.exportImageFilePath is None:
-            dpg.configure_item("exportImageError", show=True)
-            return
-
-        dpg.configure_item("exportImageError", show=False)
-
-        lastTabIndex = {
-            'Processing': Blocks.histogramEqualization.name,
-            'Filtering': Blocks.grayscale.name,
-            'Thresholding': Blocks.findContour.name,
+        # outputImage = f
+        # # sharpen the image
+        outputImage = self.unsharpMask(f)
+        outputImage = np.maximum(outputImage, np.zeros(outputImage.shape))
+        outputImage = np.minimum(outputImage, self.imgBitDepth[image.dtype.name]*np.ones(outputImage.shape))
+        outputImage = image.dtype.type(outputImage)
+        
+        return outputImage
+    
+    def unsharpMask(self, image, sigma=1.0, amount=1.0, threshold=0):
+        "Return a sharpened version of the image, using an unsharp mask."
+        kernelSize = 2 * int(np.ceil(2 * sigma)) + 1
+        blurred = cv2.GaussianBlur(image, (kernelSize,kernelSize), sigma)
+        sharpened = float(amount + 1) * image - float(amount) * blurred
+        if threshold > 0:
+            low_contrast_mask = np.absolute(image - blurred) < threshold
+            np.copyto(sharpened, image, where=low_contrast_mask)
+        return sharpened
+    
+    def selectFolder(self, sender=None, app_data=None):
+        self.exportFolderPath = app_data['file_path_name']
+        dpg.set_value('lptImgOutputFolder', 'Folder: ' + self.exportFolderPath)
+    
+    def cancelSelectFolder(self, sender=None, app_data=None):
+        dpg.hide_item("lptImgOutputDialog")
+    
+    def runBatch(self, sender=None, app_data=None):
+        dpg.set_value('lptImgExportStatus', 'Status: --')
+        
+        # create sub folder
+        for i in range(len(self.imgFileName)):
+            subFolderPath = os.path.join(self.exportFolderPath, self.camName[i])
+            if os.path.isdir(subFolderPath) is False:
+                os.mkdir(subFolderPath)
+        
+        # get all parameters
+        invertFlag = dpg.get_value('lptInvertImgCheckbox')
+        removeBkgFlag = dpg.get_value('lptRemoveBkgCheckbox')
+        brightnessAndContrastFlag = dpg.get_value('lptBrightnessAndContrastCheckbox')
+        imAdjustFlag = dpg.get_value('lptImAdjustCheckbox')
+        labvisionFlag = dpg.get_value('lptLabvisionCheckbox')
+        
+        nFrameBkg = dpg.get_value('lptRemoveBkgFrameNum')
+        frameStep = dpg.get_value('lptRemoveBkgFrameStep')
+        alpha = dpg.get_value('lptContrastSlider')
+        beta = dpg.get_value('lptBrightnessSlider')
+        imadjustRange = dpg.get_value('lptImAdjustRange')
+        sigma = dpg.get_value('lptGaussianBlurSlider')
+        kernelSize = dpg.get_value('lptFilterSizeSlider')
+        
+        params = {
+            'invertFlag': invertFlag,
+            'removeBkgFlag': removeBkgFlag,
+            'brightnessAndContrastFlag': brightnessAndContrastFlag,
+            'imAdjustFlag': imAdjustFlag,
+            'labvisionFlag': labvisionFlag,
+            'nFrameBkg': nFrameBkg,
+            'frameStep': frameStep,
+            'alpha': alpha,
+            'beta': beta,
+            'imadjustRange': imadjustRange,
+            'sigma': sigma,
+            'kernelSize': kernelSize,
+            'bkg': None,
         }
-        path = self.exportImageFilePath
-        image = self.blocks[self.getLastActiveBeforeMethod(lastTabIndex[self.currentTab])]['output']
-        cv2.imwrite(path, image)
-        dpg.configure_item('exportImageAsFile', show=False)
-
-    def enableAllTags(self):
-        checkboxes = [
-            'histogramCheckbox',
-            'brightnessAndContrastCheckbox',
-            'averageBlurCheckbox',
-            'gaussianBlurCheckbox',
-            'medianBlurCheckbox',
-            'excludeBlueChannel',
-            'excludeGreenChannel',
-            'excludeRedChannel',
-            'laplacianCheckbox',
-            'sobelCheckbox',
-            'globalThresholdingCheckbox',
-            'invertGlobalThresholding',
-            'adaptativeThresholdingCheckbox',
-            'adaptativeGaussianThresholdingCheckbox',
-            'otsuBinarization',
-            'extractContourButton',
-            'exportImageAsFileProcessing',
-            'exportImageAsFileFiltering',
-            'exportImageAsFileThresholding'
-        ]
-        for checkbox in checkboxes:
-            dpg.configure_item(checkbox, enabled=True)
-        pass
-
-    def disableAllTags(self):
-        checkboxes = [
-            'histogramCheckbox',
-            'brightnessAndContrastCheckbox',
-            'averageBlurCheckbox',
-            'gaussianBlurCheckbox',
-            'medianBlurCheckbox',
-            'excludeBlueChannel',
-            'excludeGreenChannel',
-            'excludeRedChannel',
-            'laplacianCheckbox',
-            'sobelCheckbox',
-            'globalThresholdingCheckbox',
-            'invertGlobalThresholding',
-            'adaptativeThresholdingCheckbox',
-            'adaptativeGaussianThresholdingCheckbox',
-            'otsuBinarization',
-            'extractContourButton',
-            'exportImageAsFileProcessing',
-            'exportImageAsFileFiltering',
-            'exportImageAsFileThresholding'
-        ]
-        for checkbox in checkboxes:
-            dpg.configure_item(checkbox, enabled=False)
-        pass
-
-    def uncheckAllTags(self):
-        checkboxes = [
-            'histogramCheckbox',
-            'brightnessAndContrastCheckbox',
-            'averageBlurCheckbox',
-            'gaussianBlurCheckbox',
-            'medianBlurCheckbox',
-            'excludeBlueChannel',
-            'excludeGreenChannel',
-            'excludeRedChannel',
-            'laplacianCheckbox',
-            'sobelCheckbox',
-            'globalThresholdingCheckbox',
-            'invertGlobalThresholding',
-            'adaptativeThresholdingCheckbox',
-            'adaptativeGaussianThresholdingCheckbox',
-            'otsuBinarization',
-            'extractContourButton',
-            'exportImageAsFileProcessing',
-            'exportImageAsFileFiltering',
-            'exportImageAsFileThresholding'
-        ]
-        for checkbox in checkboxes:
-            dpg.set_value(checkbox, False)
-        pass
+        
+        # run batch
+        nThreads = dpg.get_value('lptImgThreadNum')
+        for camID in range(len(self.imgFileName)):
+            with open(self.imgFilePath[camID], 'r') as f:
+                lines = f.readlines()
+                nFrame = len(lines)
+            
+            # get background image
+            if removeBkgFlag is True:
+                img = cv2.imread(lines[0].replace('\n',''), cv2.IMREAD_ANYDEPTH)
+                bkg = self.getBkgfunc(img, nFrameBkg, frameStep, camID)
+                params['bkg'] = bkg
+            
+            with Pool(nThreads) as pool:
+                pool.starmap(self.batchTask, zip(itertools.repeat(camID), list(range(nFrame)), itertools.repeat(params)))
+        
+        print('Batch processing finished!')
+        dpg.set_value('lptImgExportStatus', 'Status: Finish!')
+        
+    def batchTask(self, camID, frameID, params):        
+        with open(self.imgFilePath[camID], 'r') as f:
+            lines = f.readlines()
+            imgPath = lines[frameID].replace('\n','')
+            imgName = imgPath.split(os.sep)[-1]
+            
+        # read image
+        image = cv2.imread(imgPath, cv2.IMREAD_ANYDEPTH)
+        
+        # invert image
+        if params['invertFlag'] is True:
+            image = self.invertImgfunc(image)
+        
+        # remove background
+        if params['removeBkgFlag'] is True:
+            image = self.removeBkgfunc(image, params['bkg'])
+        
+        # brightness and contrast
+        if params['brightnessAndContrastFlag'] is True:
+            image = self.brightnessAndContrastfunc(image, params['alpha'], params['beta'])
+        
+        # imadjust
+        if params['imAdjustFlag'] is True:
+            image = self.imAdjustfunc(image, params['imadjustRange'])
+        
+        # labvision
+        if params['labvisionFlag'] is True:
+            image = self.labvisionfunc(image, params['sigma'], params['kernelSize'])
+        
+        # save image
+        exportPath = os.path.join(self.exportFolderPath, self.camName[camID], imgName)
+        cv2.imwrite(exportPath, image)
+    

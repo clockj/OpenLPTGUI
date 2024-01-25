@@ -4,6 +4,5 @@ matplotlib==3.8.2
 shapely==2.0.2
 PyInstaller==6.3.0
 opencv==4.8.1
-platform==1.0.8
 pydicom==2.4.4
 scipy==1.11.4
