@@ -36,15 +36,16 @@ class ContourExtraction:
         #        ^
         #        |
         #        0 -->
-        self.selectAxisFlag = False
-        self.selectAxisTag = None 
-        self.selectAxisID = None
-        self.selectAxisCount = 0
+        self.selectCornersFlag = False
+        self.selectCornersTag = None
+        self.selectCornersCount = 0
         self.height = 1 
         self.width = 1
-        self.axis = np.zeros(shape=(2,4)) #         x1,y1,x2,y2
-                                          # axis 1 
-                                          # axis 2
+        self.corners = np.zeros(shape=(4,2)) #    MouseX,MouseY
+                                             # BL
+                                             # TL
+                                             # TR
+                                             # BR
         self.ptXYID = None
         self.centerExport = None # WorldX,WorldY,WorldZ,Row,Col,MouseX,MouseY
                                           
@@ -166,90 +167,147 @@ class ContourExtraction:
         dpg.configure_item('Extract Plane Coordinate', show=True)
 
     def createAxis(self, sender=None, app_data=None):
-        if self.selectAxisFlag:
-            if self.selectAxisCount < 2:
+        if self.selectCornersFlag:
+            if self.selectCornersCount < 4:
                 pos = dpg.get_plot_mouse_pos()
-                self.selectAxisCount += 1
-                self.axis[self.selectAxisID, 2*(self.selectAxisCount-1)] = pos[0]
-                self.axis[self.selectAxisID, 2*(self.selectAxisCount-1)+1] = pos[1]
+                self.corners[self.selectCornersCount, 0] = pos[0]
+                self.corners[self.selectCornersCount, 1] = pos[1]
                 
-                text = f'Point {self.selectAxisCount}: ({pos[0]:.2f},{pos[1]:.2f})'
-                dpg.set_value(self.selectAxisTag + f'Pt{self.selectAxisCount}', text)
+                tag = self.selectCornersTag + str(self.selectCornersCount+1)
+                text = dpg.get_value(tag).replace('--', f'({pos[0]:.2f},{pos[1]:.2f})')
+                dpg.set_value(tag, text)
                 
                 image = self.imageProcessing.blocks[Blocks.findContour.value]['output']
                 pt = (int(pos[0]), self.height-int(pos[1]))
                 cv2.drawMarker(image, pt, (0,0,255), markerType=cv2.MARKER_CROSS, 
-                                markerSize=10, thickness=1)
-                if self.selectAxisCount == 2:
-                    pt1 = (int(self.axis[self.selectAxisID,0]), int(self.height-self.axis[self.selectAxisID,1]))
-                    pt2 = (int(self.axis[self.selectAxisID,2]), int(self.height-self.axis[self.selectAxisID,3]))
-                    cv2.line(image, pt1, pt2, color=(0,0,255), thickness=2)
+                               markerSize=10, thickness=1)
+                
+                self.selectCornersCount += 1
+                if self.selectCornersCount == 4:
+                    pts = self.corners.copy()
+                    pts[:,1] = self.height - pts[:,1]
+                    pts = np.reshape(pts.astype(np.int32), (-1,1,2))
+                    cv2.polylines(image, [pts], True, color=(0,0,255), thickness=2)
+                
                 self.imageProcessing.blocks[Blocks.findContour.value]['output'] = image
                 Texture.updateTexture(self.imageProcessing.blocks[Blocks.findContour.value]['tab'], image)
             else:
-                self.selectAxisCount = 0
-                self.selectAxisFlag = False
-        pass
-    
-    def selectAxis(self, sender=None, app_data=None):    
-        if self.selectAxisFlag and self.selectAxisTag != sender:
-            dpg.configure_item('errAxis')
+                self.selectCornersCount = 0
+                self.selectCornersFlag = False
+
+    def selectCorners(self, sender=None, app_data=None):
+        if self.selectCornersFlag and self.selectCornersTag != sender:
+            dpg.configure_item('errCorners')
         else:
-            self.selectAxisFlag = True
-            self.selectAxisTag = sender
-            self.selectAxisID = int(sender[-1]) - 1
-
-    def extractPoints(self, sender=None, app_data=None):
-        # get left axis 
-        LeftID = dpg.get_value('Axis1')
-        BottomID = dpg.get_value('Axis1_Bottom')
-        TopID = dpg.get_value('Axis1_Top')
+            self.selectCornersFlag = True
+            self.selectCornersTag = sender
+    
+    def extractPoints(self, sender=None, app_data=None):        
+        # get axix id 
+        BottomID = dpg.get_value('AxisID_Bottom')
+        TopID = dpg.get_value('AxisID_Top')
+        LeftID = dpg.get_value('AxisID_Left')
+        RightID = dpg.get_value('AxisID_Right')
         
-        x1,y1,x2,y2 = self.axis[0,:]
-        pt1 = np.array([x1,y1])
-        vecY = np.array([x2-x1,y2-y1]) / (TopID-BottomID)
+        # get sign for axis id 
+        signX = np.sign(RightID-LeftID)
+        signY = np.sign(TopID-BottomID)
         
-        # get bottom axis
-        if BottomID != dpg.get_value('Axis2'):
-            dpg.configure_item('errBottomID')
-            return
-        if LeftID != dpg.get_value('Axis2_Left'):
-            dpg.configure_item('errLeftID')
-            return
-        RightID = dpg.get_value('Axis2_Right')
+        # get number of grids on each axis
+        nx = int(abs(RightID-LeftID)) + 1
+        ny = int(abs(TopID-BottomID)) + 1
         
-        x1,y1,x2,y2 = self.axis[1,:]
-        pt2 = np.array([x1,y1])
-        vecX = np.array([x2-x1,y2-y1]) / (RightID-LeftID)
-
+        # get axis vectors
+        ptBL = self.corners[0,:]
+        ptTL = self.corners[1,:]
+        ptTR = self.corners[2,:]
+        ptBR = self.corners[3,:]
+        leftVec = (ptTL - ptBL) / (TopID - BottomID)
+        rightVec = (ptTR - ptBR) / (TopID - BottomID)
+        topVec = (ptTR - ptTL) / (RightID - LeftID)
+        bottomVec = (ptBR - ptBL) / (RightID - LeftID)
+        
+        # set threshold 
+        threshold = min(np.linalg.norm(leftVec), 
+                        np.linalg.norm(rightVec), 
+                        np.linalg.norm(topVec), 
+                        np.linalg.norm(bottomVec)) / 2
+        threshold = threshold**2
         
         # find idex matching
-        centers = self.contourCenters[np.logical_not(np.isnan(self.contourCenters[:,0])),:]
+        # centers = self.contourCenters[np.logical_not(np.isnan(self.contourCenters[:,0])),:]
+        centers = self.contourCenters
         ncenter = centers.shape[0]
         self.ptXYID = np.zeros(shape=(ncenter,4))
         self.ptXYID[:,0:2] = centers
         self.ptXYID[:,2:4] = None
-        threshold = min(np.sum(np.square(vecX)),
-                        np.sum(np.square(vecY))) / 4
-        ptRef = (pt1+pt2) / 2
         
-        nx = abs(RightID-LeftID) + 1
-        ny = abs(TopID-BottomID) + 1
-        signX = np.sign(RightID-LeftID)
-        signY = np.sign(TopID-BottomID)
-        for i in range(0,nx):
-            addX = vecX * i * signX
-            for j in range(0,ny):
-                addY = vecY * j * signY
-                add = addX + addY 
-                ptGrid = ptRef + add
+        # find axis points
+        axisThreshold = dpg.get_value('axisThreshold')
+        leftAxisPoints, axisPtID = self.findAxisPoints([ptBL, ptTL], centers, axisThreshold, 'y')
+        if len(axisPtID) != ny:
+            dpg.configure_item('errAxisPoints', show=True)
+            dpg.add_text('Left Axis Points: ', parent='errAxisPoints')
+            dpg.add_text(str(leftAxisPoints), parent='errAxisPoints')
+            return
+        self.ptXYID[axisPtID,2] = LeftID
+        self.ptXYID[axisPtID,3] = np.arange(BottomID, TopID+1)
+
+        rightAxisPoints, axisPtID = self.findAxisPoints([ptBR, ptTR], centers, axisThreshold, 'y')
+        if len(axisPtID) != ny:
+            dpg.configure_item('errAxisPoints', show=True)
+            dpg.add_text('Right Axis Points: ', parent='errAxisPoints')
+            dpg.add_text(str(rightAxisPoints), parent='errAxisPoints')
+            return
+        self.ptXYID[axisPtID,2] = RightID
+        self.ptXYID[axisPtID,3] = np.arange(BottomID, TopID+1)
+        
+        topAxisPoints, axisPtID = self.findAxisPoints([ptTL, ptTR], centers, axisThreshold, 'x')
+        if len(axisPtID) != nx:
+            dpg.configure_item('errAxisPoints', show=True)
+            dpg.add_text('Top Axis Points: ', parent='errAxisPoints')
+            dpg.add_text(str(topAxisPoints), parent='errAxisPoints')
+            return
+        self.ptXYID[axisPtID,2] = np.arange(LeftID, RightID+1)
+        self.ptXYID[axisPtID,3] = TopID
+        
+        bottomAxisPoints, axisPtID = self.findAxisPoints([ptBL, ptBR], centers, axisThreshold, 'x')
+        if len(axisPtID) != nx:
+            dpg.configure_item('errAxisPoints', show=True)
+            dpg.add_text('Bottom Axis Points: ', parent='errAxisPoints')
+            dpg.add_text(str(bottomAxisPoints), parent='errAxisPoints')
+            return
+        self.ptXYID[axisPtID,2] = np.arange(LeftID, RightID+1)
+        self.ptXYID[axisPtID,3] = BottomID
+        
+        # find internal points
+        for i in range(1,nx-1):
+            for j in range(1,ny-1):
+                # compute horizontal line
+                pt1 = leftAxisPoints[j]
+                pt2 = rightAxisPoints[j]
+                vec = pt2 - pt1
+                vec /= np.linalg.norm(vec)
+                lineX = [pt1, vec]
                 
+                # compute vertical line
+                pt1 = bottomAxisPoints[i]
+                pt2 = topAxisPoints[i]
+                vec = pt2 - pt1
+                vec /= np.linalg.norm(vec)
+                lineY = [pt1, vec]
+
+                # compute cross point
+                ptGrid = self.findCrossPoint(lineX, lineY)
+                
+                # find closest contour center
                 diff = np.sum(np.square(centers - ptGrid), axis=1)
                 id = np.argmin(diff)
                 
                 if diff[id] < threshold:
                     self.ptXYID[id, 2] = LeftID + i * signX
                     self.ptXYID[id, 3] = BottomID + j * signY
+                    
         # plot idex 
         image = self.imageProcessing.blocks[self.imageProcessing.getLastActiveBeforeMethod('findContour')]['output'].copy()
         
@@ -258,7 +316,7 @@ class ContourExtraction:
                 center = (int(self.ptXYID[i,0]),int(self.height-self.ptXYID[i,1])) # convert into cv2 coordinate
                 cv2.circle(image,center,3,(0,0,255),-1)
                 
-                text = f'({self.ptXYID[i,2]},{self.ptXYID[i,3]})'
+                text = f'({int(self.ptXYID[i,2])},{int(self.ptXYID[i,3])})'
                 txtpos = (center[0]+5, center[1]-5)
                 cv2.putText(image, text, txtpos, fontScale = 0.3, fontFace=cv2.FONT_HERSHEY_SIMPLEX, color = (250,0,0))
         
@@ -266,7 +324,50 @@ class ContourExtraction:
         Texture.updateTexture(self.imageProcessing.blocks[Blocks.findContour.value]['tab'], image)
         
         dpg.configure_item('Extract World Coordinate', show=True)
-        pass
+    
+    def findCrossPoint(self, line1, line2):
+        pt1, vec1 = line1
+        pt2, vec2 = line2
+        lambda1 = (vec2[1] * (pt2[0] - pt1[0]) + vec2[0] * (pt1[1] - pt2[1])) / (vec1[0] * vec2[1] - vec1[1] * vec2[0])
+        ptCross = pt1 + lambda1 * vec1
+        return ptCross
+    
+    def findPointLineDistance(self, pt, line):
+        pt1, vec = line
+        diff = pt - pt1
+        diffMag = np.sqrt(np.sum(np.square(diff), axis=1))
+        vec2 = diff / np.reshape(diffMag, (-1,1))
+        cosTheta = np.dot(vec2, vec)
+        sinTheta = np.sqrt(1 - cosTheta**2)
+        return sinTheta * diffMag
+    
+    def findAxisPoints(self, axisBoundary, centers, threshold, axisName): 
+        pt1, pt2 = axisBoundary       
+        lineVec = pt2 - pt1
+        lineVec /= np.linalg.norm(lineVec)
+        
+        # calculate distance from each contour center to the line
+        distance = self.findPointLineDistance(centers, [pt1, lineVec])
+        
+        
+        if axisName == 'x':
+            axisPtID = np.where((distance < threshold) & (centers[:,0] > pt1[0] - threshold) & (centers[:,0] < pt2[0] + threshold))[0]
+            
+            axisPoints = np.reshape(centers[axisPtID,:], (-1,2))
+            x = axisPoints[:,0]
+            id = np.argsort(x)
+            
+        elif axisName == 'y':
+            axisPtID = np.where((distance < threshold) & (centers[:,1] > pt1[1] - threshold) & (centers[:,1] < pt2[1] + threshold))[0]
+            
+            axisPoints = np.reshape(centers[axisPtID,:], (-1,2))
+            y = axisPoints[:,1]
+            id = np.argsort(y)
+            
+        axisPoints = axisPoints[id,:]
+        axisPtID = axisPtID[id]
+        
+        return list(axisPoints), axisPtID
     
     def extractWorldCoordinate(self, sender=None, app_data=None):
         mouseAxisXTag = dpg.get_value('mouseAxisX')

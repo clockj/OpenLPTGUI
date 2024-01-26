@@ -26,21 +26,25 @@ def showContourExtraction(callbacks):
             with dpg.group(tag='Extract Plane Coordinate',show=False):
                 dpg.add_text('Extract Plane Coordinates')
 
-                dpg.add_text('Enter bottom and top index for left axis')
-                dpg.add_input_int(tag='Axis1',label='Fix x', default_value=-9)
-                dpg.add_input_int(tag='Axis1_Bottom',label='Bottom ID', default_value=-7)
-                dpg.add_input_int(tag='Axis1_Top',label='Top ID', default_value=7)
-                dpg.add_button(tag='selectAxis1',label='Select bottom and top points',callback=callbacks.contourExtraction.selectAxis)
-                dpg.add_text('Point 1: --',tag='selectAxis1Pt1')
-                dpg.add_text('Point 2: --',tag='selectAxis1Pt2')
+                dpg.add_text('Enter index for each axis')
+                dpg.add_text('Input threshold to find axis points')
+                dpg.add_input_float(tag='axisThreshold', default_value=10)
+                # dpg.add_input_int(tag='AxisID_Bottom',label='Bottom ID', default_value=-7)
+                # dpg.add_input_int(tag='AxisID_Top',label='Top ID', default_value=7)
+                # dpg.add_input_int(tag='AxisID_Left',label='Left ID', default_value=-9)
+                # dpg.add_input_int(tag='AxisID_Right',label='Right ID', default_value=9)
+                dpg.add_input_int(tag='AxisID_Bottom',label='Bottom ID', default_value=-6)
+                dpg.add_input_int(tag='AxisID_Top',label='Top ID', default_value=7)
+                dpg.add_input_int(tag='AxisID_Left',label='Left ID', default_value=-13)
+                dpg.add_input_int(tag='AxisID_Right',label='Right ID', default_value=10)
                 
-                dpg.add_text('Enter left and right index for bottom axis')
-                dpg.add_input_int(tag='Axis2',label='Fix y', default_value=-7)
-                dpg.add_input_int(tag='Axis2_Left',label='Left ID', default_value=-9)
-                dpg.add_input_int(tag='Axis2_Right',label='Right ID', default_value=9)
-                dpg.add_button(tag='selectAxis2',label='Select left and right points',callback=callbacks.contourExtraction.selectAxis)
-                dpg.add_text('Point 1: --',tag='selectAxis2Pt1')
-                dpg.add_text('Point 2: --',tag='selectAxis2Pt2')
+                dpg.add_text('Select the four corners')
+                dpg.add_text('Bottom Left -> Top Left -> Top Right -> Bottom Right')
+                dpg.add_button(tag='selectCorners',label='Select corners',callback=callbacks.contourExtraction.selectCorners)
+                dpg.add_text('BL: --',tag='selectCorners1')
+                dpg.add_text('TL: --',tag='selectCorners2')
+                dpg.add_text('TR: --',tag='selectCorners3')
+                dpg.add_text('BR: --',tag='selectCorners4')    
 
                 dpg.add_button(tag='extractPtOnPlane', label='Extract points on the plane', callback=callbacks.contourExtraction.extractPoints)
                 
@@ -60,18 +64,14 @@ def showContourExtraction(callbacks):
                 dpg.add_button(tag='extractWorldCoordinate', label='Extract world coordinate', callback=callbacks.contourExtraction.extractWorldCoordinate)
                 
             
-            with dpg.window(label="ERROR! The previous axis selection is not finished!", modal=True, show=False, tag="errAxis", no_title_bar=False):
-                dpg.add_text("ERROR: You must finish selecting the previous axis.")
-                dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("errAxis", show=False))
-                
-            with dpg.window(label="ERROR! The previous left ID is different from the current value!", modal=True, show=False, tag="errLeftID", no_title_bar=False):
-                dpg.add_text("ERROR: You must reset left ID.")
-                dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("errLeftID", show=False))
-                
-            with dpg.window(label="ERROR! The previous bottom ID is different from the current value!", modal=True, show=False, tag="errBottomID", no_title_bar=False):
-                dpg.add_text("ERROR: You must reset bottom ID.")
-                dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("errBottomID", show=False))
-                
+            with dpg.window(label="ERROR! The previous corner selection is not finished!", modal=True, show=False, tag="errCorners", no_title_bar=False):
+                dpg.add_text("ERROR: You must finish selecting the corners.")
+                dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("errCorners", show=False))
+            
+            with dpg.window(label="ERROR! The axis point extraction is not as expected!", modal=True, show=False, tag="errAxisPoints", no_title_bar=False):
+                dpg.add_text("ERROR: You must check the points near the axis.", tag="errAxisPointsText")
+                dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("errMouseAxis", show=False))
+            
             with dpg.window(label="ERROR! The world axis for x and y must be different!", modal=True, show=False, tag="errMouseAxis", no_title_bar=False):
                 dpg.add_text("ERROR: You must reselect world axis.")
                 dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("errMouseAxis", show=False))
@@ -92,8 +92,6 @@ def showContourExtraction(callbacks):
                     dpg.add_button(label='Cancel', width=-1, callback=lambda: dpg.configure_item('exportCenters', show=False))
                 dpg.add_text("Missing file name or directory.", tag="exportCentersError", show=False)
                     
-                pass
-            
             with dpg.window(label="Save File", modal=False, show=False, tag="exportContourWindow", no_title_bar=False, min_size=[600,280]):
                 dpg.add_text("Name your file")
                 dpg.add_input_text(tag='inputContourNameText')
@@ -124,8 +122,6 @@ def showContourExtraction(callbacks):
                     dpg.add_button(label='Save', width=-1, callback=callbacks.contourExtraction.exportSelectedContourToFile)
                     dpg.add_button(label='Cancel', width=-1, callback=lambda: dpg.configure_item('exportSelectedContourWindow', show=False))
                 dpg.add_text("Missing file name or directory.", tag="exportSelectedContourError", show=False)
-                    
-                pass
         
         with dpg.child_window(tag='ContourExtractionParent'):
             with dpg.plot(tag="ContourExtractionPlotParent", label="ContourExtraction", height=-1 - 50, width=-1):

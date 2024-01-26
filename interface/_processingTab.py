@@ -6,8 +6,8 @@ def showProcessing(callbacks):
             
             with dpg.file_dialog(directory_selector=False, min_size=[400,300], show=False, tag='file_dialog_id', callback=callbacks.imageProcessing.openFile, cancel_callback=callbacks.imageProcessing.cancelImportImage):
                 dpg.add_file_extension("", color=(150, 255, 150, 255))
-                dpg.add_file_extension(".png", color=(0, 255, 255, 255))
                 dpg.add_file_extension(".tif", color=(0, 255, 255, 255))
+                dpg.add_file_extension(".png", color=(0, 255, 255, 255))
                 dpg.add_file_extension(".tiff", color=(0, 255, 255, 255))
                 dpg.add_file_extension(".jpg", color=(0, 255, 255, 255))
                 dpg.add_file_extension(".dcm", color=(0, 255, 255, 255))
