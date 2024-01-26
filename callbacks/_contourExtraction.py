@@ -247,7 +247,7 @@ class ContourExtraction:
         leftAxisPoints, axisPtID = self.findAxisPoints([ptBL, ptTL], centers, axisThreshold, 'y')
         if len(axisPtID) != ny:
             dpg.configure_item('errAxisPoints', show=True)
-            dpg.add_text('Left Axis Points: ', parent='errAxisPoints')
+            dpg.add_text(f'Left Axis Points: {len(axisPtID)}', parent='errAxisPoints')
             dpg.add_text(str(leftAxisPoints), parent='errAxisPoints')
             return
         self.ptXYID[axisPtID,2] = LeftID
@@ -256,7 +256,7 @@ class ContourExtraction:
         rightAxisPoints, axisPtID = self.findAxisPoints([ptBR, ptTR], centers, axisThreshold, 'y')
         if len(axisPtID) != ny:
             dpg.configure_item('errAxisPoints', show=True)
-            dpg.add_text('Right Axis Points: ', parent='errAxisPoints')
+            dpg.add_text(f'Right Axis Points: {len(axisPtID)}', parent='errAxisPoints')
             dpg.add_text(str(rightAxisPoints), parent='errAxisPoints')
             return
         self.ptXYID[axisPtID,2] = RightID
@@ -265,7 +265,7 @@ class ContourExtraction:
         topAxisPoints, axisPtID = self.findAxisPoints([ptTL, ptTR], centers, axisThreshold, 'x')
         if len(axisPtID) != nx:
             dpg.configure_item('errAxisPoints', show=True)
-            dpg.add_text('Top Axis Points: ', parent='errAxisPoints')
+            dpg.add_text(f'Top Axis Points: {len(axisPtID)}', parent='errAxisPoints')
             dpg.add_text(str(topAxisPoints), parent='errAxisPoints')
             return
         self.ptXYID[axisPtID,2] = np.arange(LeftID, RightID+1)
@@ -274,7 +274,7 @@ class ContourExtraction:
         bottomAxisPoints, axisPtID = self.findAxisPoints([ptBL, ptBR], centers, axisThreshold, 'x')
         if len(axisPtID) != nx:
             dpg.configure_item('errAxisPoints', show=True)
-            dpg.add_text('Bottom Axis Points: ', parent='errAxisPoints')
+            dpg.add_text(f'Bottom Axis Points: {len(axisPtID)}', parent='errAxisPoints')
             dpg.add_text(str(bottomAxisPoints), parent='errAxisPoints')
             return
         self.ptXYID[axisPtID,2] = np.arange(LeftID, RightID+1)

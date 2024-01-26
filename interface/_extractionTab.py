@@ -71,7 +71,7 @@ def showContourExtraction(callbacks):
             
             with dpg.window(label="ERROR! The axis point extraction is not as expected!", modal=True, show=False, tag="errAxisPoints", no_title_bar=False):
                 dpg.add_text("ERROR: You must check the points near the axis.", tag="errAxisPointsText")
-                dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("errMouseAxis", show=False))
+                dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("errAxisPoints", show=False))
             
             with dpg.window(label="ERROR! The world axis for x and y must be different!", modal=True, show=False, tag="errMouseAxis", no_title_bar=False):
                 dpg.add_text("ERROR: You must reselect world axis.")
