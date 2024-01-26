@@ -4,6 +4,11 @@ def showFiltering(callbacks):
     with dpg.group(horizontal=True):
         with dpg.child_window(width=300):
             with dpg.group(horizontal=True):
+                dpg.add_checkbox(tag='invertImage', callback=lambda sender, app_data: callbacks.imageProcessing.toggleAndExecuteQuery('invertImage', sender, app_data))
+                dpg.add_text('Invert Image')
+            dpg.add_separator()
+            
+            with dpg.group(horizontal=True):
                 dpg.add_checkbox(tag='setAreaColor', callback=lambda sender, app_data: callbacks.imageProcessing.toggleAndExecuteQuery('setAreaColor', sender, app_data))
                 dpg.add_text('Set Area Color')
             dpg.add_color_picker(tag='areaColorPicker', default_value=[255, 255, 255, 255], width=-1)
@@ -35,7 +40,7 @@ def showFiltering(callbacks):
                 dpg.add_checkbox(tag='gaussianBlurCheckbox', callback=lambda sender, app_data: callbacks.imageProcessing.toggleAndExecuteQuery('gaussianBlur', sender, app_data))
                 dpg.add_text('Gaussian Blur')
             dpg.add_text('Intensity')
-            dpg.add_slider_int(tag='gaussianBlurSlider', default_value=1, min_value=1, max_value=100, width=-1, callback=lambda: callbacks.imageProcessing.executeQuery('gaussianBlur'))
+            dpg.add_slider_float(tag='gaussianBlurSlider', default_value=0.5, min_value=0, max_value=10, width=-1, callback=lambda: callbacks.imageProcessing.executeQuery('gaussianBlur'))
             dpg.add_separator()
 
             with dpg.group(horizontal=True):

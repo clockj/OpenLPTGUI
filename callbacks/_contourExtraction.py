@@ -56,9 +56,9 @@ class ContourExtraction:
         adaptativeGaussianThresholdSelectedFlag = dpg.get_value('adaptativeGaussianThresholdingCheckbox')
         otsuBinarizationFlag = dpg.get_value('otsuBinarization')
 
-        if globalThresholdSelectedFlag == False and adaptativeThresholdSelectedFlag == False and adaptativeGaussianThresholdSelectedFlag == False and otsuBinarizationFlag == False:
-            dpg.configure_item('nonBinary', show=True)
-            return
+        # if globalThresholdSelectedFlag == False and adaptativeThresholdSelectedFlag == False and adaptativeGaussianThresholdSelectedFlag == False and otsuBinarizationFlag == False:
+        #     dpg.configure_item('nonBinary', show=True)
+        #     return
 
         image = self.imageProcessing.blocks[self.imageProcessing.getLastActiveBeforeMethod('findContour')]['output'].copy()
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -81,7 +81,8 @@ class ContourExtraction:
         if areaMin > areaMax:
             dpg.configure_item('errRange', show=True)
             return
-        cnts, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, approximationMode)
+        # cnts, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, approximationMode)
+        cnts, _ = cv2.findContours(image, cv2.RETR_LIST, approximationMode)
         image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
         contours = ()
         for c in cnts:

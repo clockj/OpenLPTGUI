@@ -26,6 +26,13 @@ class CamCalibImageProcess:
                 'tab': 'Processing'
             },
             {
+                'method': self.invertImage,
+                'name': self.invertImage.__name__,
+                'status': False,
+                'output': None,
+                'tab': 'Filtering'  
+            },
+            {
                 'method': self.setAreaColor,
                 'name': self.setAreaColor.__name__,
                 'status': False,
@@ -221,7 +228,7 @@ class CamCalibImageProcess:
         dpg.set_value("brightnessSlider",0)
         dpg.set_value("contrastSlider",1)
         dpg.set_value("averageBlurSlider",1)
-        dpg.set_value("gaussianBlurSlider",1)
+        # dpg.set_value("gaussianBlurSlider",1)
         dpg.set_value("medianBlurSlider",1)
         dpg.set_value("laplacianSlider",1)
         dpg.set_value("globalThresholdSlider",127)
@@ -267,7 +274,13 @@ class CamCalibImageProcess:
         dpg.configure_item("exportImageAsFileFilteringGroup", show=True)
         dpg.configure_item("exportImageAsFileThresholdingGroup", show=True)
         pass
-
+    
+    def invertImage(self, sender=None, app_data=None):
+        image = self.blocks[self.getLastActiveBeforeMethod('invertImage')]['output']
+        image = cv2.bitwise_not(image)
+        self.blocks[Blocks.invertImage.value]['output'] = image
+        Texture.updateTexture(self.blocks[Blocks.invertImage.value]['tab'], image)
+    
     def setAreaColor(self, sender=None, app_data=None):
         if self.blocks[Blocks.setAreaColor.value]['isFirst']:
             img = self.blocks[self.getLastActiveBeforeMethod('setAreaColor')]['output'].copy()
@@ -325,8 +338,9 @@ class CamCalibImageProcess:
     def gaussianBlur(self, sender=None, app_data=None):
         image = self.blocks[self.getLastActiveBeforeMethod('gaussianBlur')]['output']
 
-        kernelSize = (2 * dpg.get_value('gaussianBlurSlider')) - 1
-        dst = cv2.GaussianBlur(image, (kernelSize,kernelSize), 0)
+        sigma = dpg.get_value('gaussianBlurSlider')
+        kernelSize = (2 * int(np.ceil(sigma))) + 1
+        dst = cv2.GaussianBlur(image, (kernelSize,kernelSize), sigma)
 
         self.blocks[Blocks.gaussianBlur.value]['output'] = dst
         Texture.updateTexture(self.blocks[Blocks.gaussianBlur.value]['tab'], dst)
