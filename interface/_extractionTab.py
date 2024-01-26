@@ -26,9 +26,10 @@ def showContourExtraction(callbacks):
             with dpg.group(tag='Extract Plane Coordinate',show=False):
                 dpg.add_text('Extract Plane Coordinates')
 
-                dpg.add_text('Enter index for each axis')
                 dpg.add_text('Input threshold to find axis points')
                 dpg.add_input_float(tag='axisThreshold', default_value=10)
+                
+                dpg.add_text('Enter index for each axis')
                 # dpg.add_input_int(tag='AxisID_Bottom',label='Bottom ID', default_value=-7)
                 # dpg.add_input_int(tag='AxisID_Top',label='Top ID', default_value=7)
                 # dpg.add_input_int(tag='AxisID_Left',label='Left ID', default_value=-9)
