@@ -252,7 +252,7 @@ class ContourExtraction:
             dpg.add_text(str(leftAxisPoints), parent='errAxisPoints')
             return
         self.ptXYID[axisPtID,2] = LeftID
-        self.ptXYID[axisPtID,3] = np.arange(BottomID, TopID+1)
+        self.ptXYID[axisPtID,3] = np.array(list(range(BottomID, TopID+1*signY, signY)), dtype=np.int32)
 
         rightAxisPoints, axisPtID = self.findAxisPoints([ptBR, ptTR], centers, axisThreshold, 'y')
         if len(axisPtID) != ny:
@@ -261,7 +261,7 @@ class ContourExtraction:
             dpg.add_text(str(rightAxisPoints), parent='errAxisPoints')
             return
         self.ptXYID[axisPtID,2] = RightID
-        self.ptXYID[axisPtID,3] = np.arange(BottomID, TopID+1)
+        self.ptXYID[axisPtID,3] = np.array(list(range(BottomID, TopID+1*signY, signY)), dtype=np.int32)
         
         topAxisPoints, axisPtID = self.findAxisPoints([ptTL, ptTR], centers, axisThreshold, 'x')
         if len(axisPtID) != nx:
@@ -269,7 +269,7 @@ class ContourExtraction:
             dpg.add_text(f'Top Axis Points: {len(axisPtID)}', parent='errAxisPoints')
             dpg.add_text(str(topAxisPoints), parent='errAxisPoints')
             return
-        self.ptXYID[axisPtID,2] = np.arange(LeftID, RightID+1)
+        self.ptXYID[axisPtID,2] = np.array(list(range(LeftID, RightID+1*signX, signX)), dtype=np.int32)
         self.ptXYID[axisPtID,3] = TopID
         
         bottomAxisPoints, axisPtID = self.findAxisPoints([ptBL, ptBR], centers, axisThreshold, 'x')
@@ -278,7 +278,7 @@ class ContourExtraction:
             dpg.add_text(f'Bottom Axis Points: {len(axisPtID)}', parent='errAxisPoints')
             dpg.add_text(str(bottomAxisPoints), parent='errAxisPoints')
             return
-        self.ptXYID[axisPtID,2] = np.arange(LeftID, RightID+1)
+        self.ptXYID[axisPtID,2] = np.array(list(range(LeftID, RightID+1*signX, signX)), dtype=np.int32)
         self.ptXYID[axisPtID,3] = BottomID
         
         # find internal points
