@@ -1,3 +1,5 @@
+# Camera Model: (PINHOLE/POLYNOMIAL)
+PINHOLE
 # Camera Calibration Error: 
 None
 # Pose Calibration Error: 
