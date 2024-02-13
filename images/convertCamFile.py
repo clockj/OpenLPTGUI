@@ -8,14 +8,14 @@ nCam = len(origFileList)
 
 for i in range(nCam):
     # load camera parameters
-    camParam = np.loadtxt(origFileList[i])
+    camParam = np.loadtxt('camFileOld/'+origFileList[i])
 
     # camera matrix
     camMat = np.zeros((3,3))
     camMat[0,0] = camParam[6] / camParam[4]
-    camMat[0,2] = (camParam[2]) / 2 - 1
+    camMat[0,2] = (camParam[2]- 1) / 2 
     camMat[1,1] = -camParam[6] / camParam[5]
-    camMat[1,2] = (camParam[3]) / 2 - 1
+    camMat[1,2] = (camParam[3]- 1) / 2 
     camMat[2,2] = 1
 
     # distortion coefficients
@@ -40,7 +40,8 @@ for i in range(nCam):
     transVecInv = - rotMatInv @ transVec
     
     # save camera parameters
-    with open(newFileList[i], 'w') as f:
+    with open('camFile/'+newFileList[i], 'w') as f:
+        f.write('# Camera Model: (PINHOLE/POLYNOMIAL)\n' + str('PINHOLE') + '\n')
         f.write('# Camera Calibration Error: \n' + str(None) + '\n')
         f.write('# Pose Calibration Error: \n' + str(None) + '\n')
         

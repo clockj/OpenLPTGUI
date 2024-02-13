@@ -653,6 +653,7 @@ class Vsc:
             if i not in self.camFixID:
                 filePath = os.path.join(self.exportFolderPath, self.exportFilePrefix+'cam'+str(i+1)+'.txt')
                 with open(filePath, 'w') as f:
+                    f.write('# Camera Model: (PINHOLE/POLYNOMIAL)\n' + str('PINHOLE') + '\n')
                     f.write('# Camera Calibration Error: \n' + str(self.camcalibErrList[i]) + '\n')
                     f.write('# Pose Calibration Error: \n' + str(self.posecalibErrList[i]) + '\n')
                     

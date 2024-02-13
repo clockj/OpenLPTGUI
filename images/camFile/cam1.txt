@@ -1,10 +1,12 @@
+# Camera Model: (PINHOLE/POLYNOMIAL)
+PINHOLE
 # Camera Calibration Error: 
 None
 # Pose Calibration Error: 
 None
 # Camera Matrix: 
-10148.266049999998,0.0,511.0
-0.0,-10148.266049999998,511.0
+10148.266049999998,0.0,511.5
+0.0,-10148.266049999998,511.5
 0.0,0.0,1.0
 # Distortion Coefficients: 
 0.0,0.0,0.0,0.0,0.0

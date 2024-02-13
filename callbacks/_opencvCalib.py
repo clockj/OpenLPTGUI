@@ -197,6 +197,7 @@ class OpencvCalib:
         filePath = os.path.join(self.exportFilePath, self.exportFileName)
         
         with open(filePath, 'w') as f:
+            f.write('# Camera Model: (PINHOLE/POLYNOMIAL)\n' + str('PINHOLE') + '\n')
             f.write('# Camera Calibration Error: \n' + str(self.camcalibErr) + '\n')
             f.write('# Pose Calibration Error: \n' + str(self.posecalibErr) + '\n')
             
