@@ -470,7 +470,7 @@ class Vsc:
         
             # Load camera parameters
             with open(values, 'r') as f:
-                lines = f.readlines()
+                lines = f.readlines()[2:]
                 
                 if 'None' in lines[1] or 'none' in lines[1]:
                     self.camcalibErrList.append(None)
