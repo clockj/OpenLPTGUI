@@ -45,6 +45,9 @@ for i in range(nCam):
         f.write('# Camera Calibration Error: \n' + str(None) + '\n')
         f.write('# Pose Calibration Error: \n' + str(None) + '\n')
         
+        f.write('# Image Size: (n_row,n_col)\n')
+        f.write(str(int(camParam[3]))+','+str(int(camParam[2]))+'\n')
+        
         f.write('# Camera Matrix: \n')
         f.write(str(camMat[0,0])+','+str(camMat[0,1])+','+str(camMat[0,2])+'\n')
         f.write(str(camMat[1,0])+','+str(camMat[1,1])+','+str(camMat[1,2])+'\n')

@@ -14,6 +14,7 @@ class Vsc:
 
         self.camcalibErrList = []
         self.posecalibErrList = []
+        self.imgNrowNcolList = [] # (n_row, n_col)
         self.camMatList = [] 
         self.distCoeffList = []
         self.rotVecList = []
@@ -444,6 +445,7 @@ class Vsc:
         self.camFileName = []
         self.camcalibErrList = []
         self.posecalibErrList = []
+        self.imgNrowNcolList = []
         self.camMatList = [] 
         self.distCoeffList = []
         self.rotVecList = []
@@ -472,46 +474,61 @@ class Vsc:
             with open(values, 'r') as f:
                 lines = f.readlines()[2:]
                 
-                if 'None' in lines[1] or 'none' in lines[1]:
+                line_id = 1
+                if 'None' in lines[line_id] or 'none' in lines[line_id]:
                     self.camcalibErrList.append(None)
                 else:
-                    self.camcalibErrList.append(float(lines[1]))
-                if 'None' in lines[3] or 'none' in lines[3]:
+                    self.camcalibErrList.append(float(lines[line_id]))
+                line_id += 2
+                if 'None' in lines[line_id] or 'none' in lines[line_id]:
                     self.posecalibErrList.append(None)
                 else:
-                    self.posecalibErrList.append(float(lines[3]))
+                    self.posecalibErrList.append(float(lines[line_id]))
                 
+                line_id += 2
+                nRownCol = np.array(lines[line_id].split(',')).astype(np.int32)
+                self.imgNrowNcolList.append(nRownCol)
+                
+                line_id += 2
                 camMat = np.zeros((3,3))
-                camMat[0,:] = np.array(lines[5].split(',')).astype(np.float32)
-                camMat[1,:] = np.array(lines[6].split(',')).astype(np.float32)
-                camMat[2,:] = np.array(lines[7].split(',')).astype(np.float32)
+                camMat[0,:] = np.array(lines[line_id].split(',')).astype(np.float32)
+                camMat[1,:] = np.array(lines[line_id+1].split(',')).astype(np.float32)
+                camMat[2,:] = np.array(lines[line_id+2].split(',')).astype(np.float32)
                 self.camMatList.append(camMat)
                 
-                distCoeff = np.array([lines[9].split(',')]).astype(np.float32)
+                line_id += 4
+                distCoeff = np.array([lines[line_id].split(',')]).astype(np.float32)
                 self.distCoeffList.append(distCoeff)
                 
+                line_id += 2
                 rotVec = np.zeros((3,1))
-                rotVec[:,0] = np.array(lines[11].split(',')).astype(np.float32)
+                rotVec[:,0] = np.array(lines[line_id].split(',')).astype(np.float32)
                 self.rotVecList.append(rotVec)
                 
+                line_id += 2
                 rotMat = np.zeros((3,3))
-                rotMat[0,:] = np.array(lines[13].split(',')).astype(np.float32)
-                rotMat[1,:] = np.array(lines[14].split(',')).astype(np.float32)
-                rotMat[2,:] = np.array(lines[15].split(',')).astype(np.float32)
+                rotMat[0,:] = np.array(lines[line_id].split(',')).astype(np.float32)
+                rotMat[1,:] = np.array(lines[line_id+1].split(',')).astype(np.float32)
+                rotMat[2,:] = np.array(lines[line_id+2].split(',')).astype(np.float32)
                 self.rotMatList.append(rotMat)
-                # line 17,18,19 are rotMatInv
+                
+                # rotMatInv
+                line_id += 4
                 rotMatInv = np.zeros((3,3))
-                rotMatInv[0,:] = np.array(lines[17].split(',')).astype(np.float32)
-                rotMatInv[1,:] = np.array(lines[18].split(',')).astype(np.float32)
-                rotMatInv[2,:] = np.array(lines[19].split(',')).astype(np.float32)
+                rotMatInv[0,:] = np.array(lines[line_id].split(',')).astype(np.float32)
+                rotMatInv[1,:] = np.array(lines[line_id+1].split(',')).astype(np.float32)
+                rotMatInv[2,:] = np.array(lines[line_id+2].split(',')).astype(np.float32)
                 self.rotMatInvList.append(rotMatInv)
                 
+                line_id += 4
                 transVec = np.zeros((3,1))
-                transVec[:,0] = np.array(lines[21].split(',')).astype(np.float32)
+                transVec[:,0] = np.array(lines[line_id].split(',')).astype(np.float32)
                 self.transVecList.append(transVec)
-                # line 23 is transVecInv
+                
+                # transVecInv
+                line_id += 2
                 transVecInv = np.zeros((3,1))
-                transVecInv[:,0] = np.array(lines[23].split(',')).astype(np.float32)
+                transVecInv[:,0] = np.array(lines[line_id].split(',')).astype(np.float32)
                 self.transVecInvList.append(transVecInv)
                 
         # Update status 
@@ -656,6 +673,9 @@ class Vsc:
                     f.write('# Camera Model: (PINHOLE/POLYNOMIAL)\n' + str('PINHOLE') + '\n')
                     f.write('# Camera Calibration Error: \n' + str(self.camcalibErrList[i]) + '\n')
                     f.write('# Pose Calibration Error: \n' + str(self.posecalibErrList[i]) + '\n')
+                    
+                    f.write('# Image Size: (n_row,n_col)\n')
+                    f.write(str(self.imgNrowNcolList[i][0])+','+str(self.imgNrowNcolList[i][1])+'\n')
                     
                     f.write('# Camera Matrix: \n')
                     f.write(str(self.camMatList[i][0,0])+','+str(self.camMatList[i][0,1])+','+str(self.camMatList[i][0,2])+'\n')

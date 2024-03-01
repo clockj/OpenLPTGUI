@@ -201,6 +201,9 @@ class OpencvCalib:
             f.write('# Camera Calibration Error: \n' + str(self.camcalibErr) + '\n')
             f.write('# Pose Calibration Error: \n' + str(self.posecalibErr) + '\n')
             
+            f.write('# Image Size: (n_row,n_col)\n')
+            f.write(str(self.imgSize[1])+','+str(self.imgSize[0])+'\n') # OpenCV: imgSize=(width, height)
+            
             f.write('# Camera Matrix: \n')
             f.write(str(self.camMat[0,0])+','+str(self.camMat[0,1])+','+str(self.camMat[0,2])+'\n')
             f.write(str(self.camMat[1,0])+','+str(self.camMat[1,1])+','+str(self.camMat[1,2])+'\n')
