@@ -1,5 +1,6 @@
 from ._contourExtraction import ContourExtraction
 from ._opencvCalib import OpencvCalib
+from ._polyCalib import PolyCalib
 from ._vsc import Vsc
 from ._lptImgProcess import LptImgProcess
 
@@ -8,6 +9,7 @@ class Callbacks:
         self.contourExtraction = ContourExtraction()
         self.imageProcessing = self.contourExtraction.imageProcessing
         self.opencvCalib = OpencvCalib()
+        self.polyCalib = PolyCalib()
         self.vsc = Vsc()
         self.lptImgProcess = LptImgProcess()
         

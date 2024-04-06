@@ -6,6 +6,7 @@ from ._thresholdingTab import showThresholding
 from ._theme import applyTheme
 
 from ._camCalibWindow import showOpenCVCalib
+from ._polyCalibWindow import showPolyCalib
 from ._vscWindow import showVSC
 from ._imgProcessWindow import showImgProcess
 
@@ -58,6 +59,10 @@ class Interface:
             applyTheme()
             showOpenCVCalib(self.callbacks)
         
+        with dpg.window(tag="polyCalib", show=False, width=800, height=400, label='Polynomial Calibration'):
+            applyTheme()
+            showPolyCalib(self.callbacks)
+        
         with dpg.window(tag="vsc", show=False, width=800, height=400, label='Volume Self Calibration'):
             applyTheme()
             showVSC(self.callbacks)
@@ -72,21 +77,20 @@ class Interface:
         dpg.set_primary_window("Main", True)
         dpg.start_dearpygui()
         dpg.destroy_context()
-        pass
     
     def selectCalibMethod(self, sender=None, app_data=None):
         method = dpg.get_value('calibMethod')
         if method == 'Calibration Plate':
             dpg.configure_item('calibPlate', show=True)
-        else:
+        elif method == 'Easy Wand':
             dpg.configure_item('easyWand', show=True)
-        pass
     
     def selectCamModel(self, sender=None, app_data=None):
         model = dpg.get_value('camModel')
         if model == 'OpenCV':
             dpg.configure_item('opcvCalib', show=True)
-        pass
+        elif model == 'Polynomial':
+            dpg.configure_item('polyCalib', show=True)
     
     """
         Responsible for invoking individual tabs.
@@ -94,24 +98,18 @@ class Interface:
     def showCalibPlateTabBar(self):
         with dpg.tab_bar():
             self.showCalibPlateTabs()
-        pass
 
     def showCalibPlateTabs(self):
         dpg.add_texture_registry(show=False, tag='textureRegistry')
         with dpg.tab(label='Processing'):
             showProcessing(self.callbacks)
-            pass
         with dpg.tab(label='Filtering'):
             showFiltering(self.callbacks)
-            pass
         with dpg.tab(label='Thresholding'):
             showThresholding(self.callbacks)
-            pass
         with dpg.tab(label='Contour Extraction'):
             showContourExtraction(self.callbacks)
-            pass
         self.callbacks.imageProcessing.disableAllTags()
-        pass
 
     def createSaveImageDialog(self):
         with dpg.window(label="Export Image as File", modal=False, show=False, tag="exportImageAsFile", no_title_bar=False, min_size=[600,255]):

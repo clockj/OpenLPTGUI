@@ -82,6 +82,8 @@ class OpencvCalib:
         pt2D, _ = cv2.projectPoints(
             self.posecalibPt3D, self.rotVec, self.transVec, self.camMat, self.distCoeff)
         self.posecalibErr = cv2.norm(pt2D, self.posecalibPt2D, cv2.NORM_L2)/self.posecalibPt2D.shape[0]
+        print('max err:', np.max(np.linalg.norm(pt2D - self.posecalibPt2D, axis=2)))
+        print('std err:', np.std(np.linalg.norm(pt2D - self.posecalibPt2D, axis=2)))
         
         # Print outputs onto the output window 
         dpg.set_value('opencvPosecalibErr', f'Pose Calibration Error: {self.posecalibErr}')
@@ -172,10 +174,10 @@ class OpencvCalib:
         self.posecalibPt3D = np.reshape(pt3d, (pt3d.shape[0],1,3))
         
         # Print outputs onto the output window 
-        with dpg.table_row(parent='opencvPosecalibFileTable'):
-            dpg.add_text(self.posecalibFileName[i])
-            dpg.add_text(self.posecalibFilePath[i])
-        pass
+        for i in range(nFiles):
+            with dpg.table_row(parent='opencvPosecalibFileTable'):
+                dpg.add_text(self.posecalibFileName[i])
+                dpg.add_text(self.posecalibFilePath[i])
     
     def cancelPoseCalibImportFile(self, sender = None, app_data = None):
         dpg.hide_item("file_dialog_opencvPoseCalib")

@@ -518,6 +518,8 @@ class CamCalibImageProcess:
 
     def enableAllTags(self):
         checkboxes = [
+            'invertImageCheckbox',
+            'setAreaColorCheckbox',
             'histogramCheckbox',
             'brightnessAndContrastCheckbox',
             'averageBlurCheckbox',
@@ -544,6 +546,8 @@ class CamCalibImageProcess:
 
     def disableAllTags(self):
         checkboxes = [
+            'invertImageCheckbox',
+            'setAreaColorCheckbox',
             'histogramCheckbox',
             'brightnessAndContrastCheckbox',
             'averageBlurCheckbox',
@@ -570,6 +574,8 @@ class CamCalibImageProcess:
 
     def uncheckAllTags(self):
         checkboxes = [
+            'invertImageCheckbox',
+            'setAreaColorCheckbox',
             'histogramCheckbox',
             'brightnessAndContrastCheckbox',
             'averageBlurCheckbox',
