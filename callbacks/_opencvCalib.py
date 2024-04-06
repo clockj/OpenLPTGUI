@@ -174,6 +174,9 @@ class OpencvCalib:
         self.posecalibPt3D = np.reshape(pt3d, (pt3d.shape[0],1,3))
         
         # Print outputs onto the output window 
+        for tag in dpg.get_item_children('opencvPosecalibFileTable')[1]:
+            dpg.delete_item(tag)
+        
         for i in range(nFiles):
             with dpg.table_row(parent='opencvPosecalibFileTable'):
                 dpg.add_text(self.posecalibFileName[i])

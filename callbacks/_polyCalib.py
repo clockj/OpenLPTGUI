@@ -63,6 +63,9 @@ class PolyCalib:
         self.calibPt3D = np.reshape(pt3d, (pt3d.shape[0],3))
         
         # Print outputs onto the output window 
+        for tag in dpg.get_item_children('polyCalibFileTable')[1]:
+            dpg.delete_item(tag)
+            
         for i in range(nFiles):
             with dpg.table_row(parent='polyCalibFileTable'):
                 dpg.add_text(self.calibFileName[i])
