@@ -28,7 +28,7 @@ class Interface:
             dpg.add_text('')
             
             dpg.add_text('2. Select a camera model')
-            dpg.add_listbox(tag='camModel', items=['OpenCV', 'Tsai', 'Polynomial'])
+            dpg.add_listbox(tag='camModel', items=['OpenCV', 'Polynomial'])
             dpg.add_button(label='Apply Model', callback=self.selectCamModel)
             dpg.add_text('')
             

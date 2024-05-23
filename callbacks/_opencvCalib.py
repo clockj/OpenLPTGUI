@@ -46,9 +46,16 @@ class OpencvCalib:
         self.imgSize = (width, height)
 
         # Perform camera calibration
-        self.camcalibErr, self.camMat, self.distCoeff, _, _ = cv2.calibrateCamera(
-            self.camcalibPt3D, self.camcalibPt2D, self.imgSize, None, None
-        )
+        if dpg.get_value('useTsaiCalib') == True:
+            flags = cv2.CALIB_FIX_PRINCIPAL_POINT + cv2.CALIB_FIX_K1 + cv2.CALIB_FIX_K2 + cv2.CALIB_FIX_K3 + cv2.CALIB_ZERO_TANGENT_DIST + cv2.CALIB_FIX_ASPECT_RATIO
+            
+            self.camcalibErr, self.camMat, self.distCoeff, _, _ = cv2.calibrateCamera(
+                self.camcalibPt3D, self.camcalibPt2D, self.imgSize, None, None, flags=flags
+            )
+        else:
+            self.camcalibErr, self.camMat, self.distCoeff, _, _ = cv2.calibrateCamera(
+                self.camcalibPt3D, self.camcalibPt2D, self.imgSize, None, None
+            )
         
         # Print outputs onto the output window 
         dpg.configure_item('opencvCalibGroup', show=True)

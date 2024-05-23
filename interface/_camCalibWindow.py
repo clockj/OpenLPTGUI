@@ -11,7 +11,7 @@ def showOpenCVCalib(callbacks):
             
             dpg.add_text('OpenCV Camera Calibration')
             dpg.add_separator()
-            
+                      
             dpg.add_text('1. Calibrate Camera Parameters')
             dpg.add_text('(Distortion Coeffictions & Camera Matrix)')
             dpg.add_button(tag='import_OpencvCalibCam', label='Import Files', callback=lambda: dpg.show_item("file_dialog_opencvCamCalib"))
@@ -22,7 +22,9 @@ def showOpenCVCalib(callbacks):
             with dpg.group(horizontal=True):
                 dpg.add_text('Image Height')
                 dpg.add_input_int(tag='inputOpencvCamHeight', default_value=800)
-                
+            
+            dpg.add_checkbox(label='Tsai''s Calibration', tag='useTsaiCalib', default_value=False)
+            
             dpg.add_button(tag='calibrate_OpencvCalibCam', label='Run Calibration', callback=callbacks.opencvCalib.calibrateCamera)
             
             dpg.add_separator()
