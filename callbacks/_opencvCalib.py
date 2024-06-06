@@ -104,6 +104,8 @@ class OpencvCalib:
         self.camcalibFilePath = []
         self.camcalibFileName = []
         self.camcalibData = []
+        self.camcalibPt2D = []
+        self.camcalibPt3D = []
         
         selections = app_data['selections']
         nFiles = len(selections)
