@@ -1,5 +1,6 @@
 from interface import Interface
 from callbacks import Callbacks
+import ctypes
 
 class App:
     def __init__(self) -> None:
@@ -8,4 +9,5 @@ class App:
 
 
 if __name__ == '__main__':
-   app = App()
+    ctypes.windll.shcore.SetProcessDpiAwareness(2)
+    app = App()
