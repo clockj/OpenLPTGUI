@@ -13,8 +13,6 @@ def get_correct_path(relative_path):
 
 def applyTheme():
 
-    # dpg.set_viewport_small_icon("icons/Icon.ico")
-    # dpg.set_viewport_large_icon("icons/Icon.ico")
     dpg.set_viewport_small_icon("icons/RuiLab.ico")
     dpg.set_viewport_large_icon("icons/RuiLab.ico")
 
@@ -64,7 +62,7 @@ def applyTheme():
 
     try:
         with dpg.font_registry():
-            default_font = dpg.add_font(fontPath, 16)
+            default_font = dpg.add_font(fontPath, 20)
 
         dpg.bind_font(default_font)
     except:

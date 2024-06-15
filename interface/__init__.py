@@ -9,6 +9,7 @@ from ._camCalibWindow import showOpenCVCalib
 from ._polyCalibWindow import showPolyCalib
 from ._vscWindow import showVSC
 from ._imgProcessWindow import showImgProcess
+from ._openLPTWindow import showOpenLPT
 
 class Interface:
 
@@ -37,7 +38,7 @@ class Interface:
             dpg.add_text('')
             
             dpg.add_text('4. Run OpenLPT')
-            dpg.add_button(label='Run OpenLPT')
+            dpg.add_button(label='Run OpenLPT', callback=lambda: dpg.configure_item('openLPT', show=True))
             dpg.add_text('')
             
             dpg.add_text('5. Run Volume Self Calibration (Optional, suggested for few calibration points)')
@@ -71,7 +72,11 @@ class Interface:
             applyTheme()
             showImgProcess(self.callbacks)
             self.callbacks.lptImgProcess.disableAllTags()
-            
+        
+        with dpg.window(tag="openLPT", show=False, width=800, height=400, label='OpenLPT'):
+            applyTheme()
+            showOpenLPT(self.callbacks)
+        
         dpg.setup_dearpygui()
         dpg.show_viewport()
         dpg.set_primary_window("Main", True)
