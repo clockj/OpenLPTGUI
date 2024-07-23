@@ -1,9 +1,12 @@
 import dearpygui.dearpygui as dpg
 
 def showImgProcess(callbacks):
+    subwindow_width = dpg.get_item_width('imgProcess')
+    subwindow_height = dpg.get_item_height('imgProcess')
+    
     with dpg.group(horizontal=True):
-        with dpg.child_window(width=300, horizontal_scrollbar=True):
-            with dpg.file_dialog(directory_selector=False, min_size=[400,300], file_count=20, show=False, tag='file_dialog_imgprocess', callback=callbacks.lptImgProcess.openImgFile, cancel_callback=callbacks.lptImgProcess.cancelImgImportFile):
+        with dpg.child_window(width=0.3*subwindow_width, horizontal_scrollbar=True):
+            with dpg.file_dialog(directory_selector=False, width=0.7*subwindow_width, height=0.9*subwindow_height, min_size=[400,300], file_count=20, show=False, tag='file_dialog_imgprocess', callback=callbacks.lptImgProcess.openImgFile, cancel_callback=callbacks.lptImgProcess.cancelImgImportFile):
                 dpg.add_file_extension("", color=(150, 255, 150, 255))
                 dpg.add_file_extension(".txt", color=(0, 255, 255, 255))
 
@@ -84,4 +87,4 @@ def showImgProcess(callbacks):
             with dpg.plot(tag="lptImgPlotParent", label="LPT Image Processing", height=-1, width=-1):
                 dpg.add_plot_legend()
                 dpg.add_plot_axis(dpg.mvXAxis, label="x", tag="lptImgProcess_x_axis")
-                dpg.add_plot_axis(dpg.mvYAxis, label="y", tag="lptImgProcess_y_axis")
+                dpg.add_plot_axis(dpg.mvYAxis, label="y", tag="lptImgProcess_y_axis", invert=True)

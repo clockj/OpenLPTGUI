@@ -1,17 +1,20 @@
 import dearpygui.dearpygui as dpg
 
 def showFiltering(callbacks):
+    subwindow_width = dpg.get_item_width('calibPlate')
+    
     with dpg.group(horizontal=True):
-        with dpg.child_window(width=300):
-            with dpg.group(horizontal=True):
-                dpg.add_checkbox(tag='invertImageCheckbox', callback=lambda sender, app_data: callbacks.imageProcessing.toggleAndExecuteQuery('invertImage', sender, app_data))
-                dpg.add_text('Invert Image')
-            dpg.add_separator()
+        with dpg.child_window(width=0.3*subwindow_width):
+            # with dpg.group(horizontal=True):
+            #     dpg.add_checkbox(tag='invertImageCheckbox', callback=lambda sender, app_data: callbacks.imageProcessing.toggleAndExecuteQuery('invertImage', sender, app_data))
+            #     dpg.add_text('Invert Image')
+            # dpg.add_separator()
             
             with dpg.group(horizontal=True):
                 dpg.add_checkbox(tag='setAreaColorCheckbox', callback=lambda sender, app_data: callbacks.imageProcessing.toggleAndExecuteQuery('setAreaColor', sender, app_data))
-                dpg.add_text('Set Area Color')
-            dpg.add_color_picker(tag='areaColorPicker', default_value=[255, 255, 255, 255], width=-1)
+                dpg.add_text('Mask Area')
+            # dpg.add_color_picker(tag='areaColorPicker', default_value=[255, 255, 255, 255], width=-1)
+            dpg.add_listbox(tag='areaColorPicker', items=['White', 'Black'], default_value='Black', width=-1)
             dpg.add_button(tag='setAreaColorButton', width=-1, label='Apply Method', callback=lambda sender, app_data: callbacks.imageProcessing.executeQuery('setAreaColor'))
             dpg.add_separator()
             

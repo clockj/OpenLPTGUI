@@ -1,10 +1,13 @@
 import dearpygui.dearpygui as dpg
 
 def showProcessing(callbacks):
+    subwindow_width = dpg.get_item_width('calibPlate')
+    subwindow_height = dpg.get_item_height('calibPlate')
+    
     with dpg.group(horizontal=True):
-        with dpg.child_window(width=400, horizontal_scrollbar=True):
+        with dpg.child_window(width=0.3*subwindow_width, horizontal_scrollbar=True):
             
-            with dpg.file_dialog(directory_selector=False, min_size=[400,300], show=False, tag='file_dialog_id', callback=callbacks.imageProcessing.openFile, cancel_callback=callbacks.imageProcessing.cancelImportImage):
+            with dpg.file_dialog(directory_selector=False, width=0.7*subwindow_width, height=0.9*subwindow_height, show=False, tag='file_dialog_id', callback=callbacks.imageProcessing.openFile, cancel_callback=callbacks.imageProcessing.cancelImportImage):
                 dpg.add_file_extension("", color=(150, 255, 150, 255))
                 dpg.add_file_extension(".tif", color=(0, 255, 255, 255))
                 dpg.add_file_extension(".png", color=(0, 255, 255, 255))

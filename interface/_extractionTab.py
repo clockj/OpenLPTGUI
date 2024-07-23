@@ -1,20 +1,21 @@
 import dearpygui.dearpygui as dpg
 
 def showContourExtraction(callbacks):
+    subwindow_width = dpg.get_item_width('calibPlate')
+    
     with dpg.group(horizontal=True):
-        with dpg.child_window(width=300,horizontal_scrollbar=True):
-            dpg.add_text('OpenCV2 Find Contour')
-            dpg.add_text('Approximation Mode')
-            dpg.add_listbox(tag='approximationModeListbox', items=['None', 'Simple', 'TC89_L1', 'TC89_KCOS'], width=-1)
+        with dpg.child_window(width=0.3*subwindow_width,horizontal_scrollbar=True):
+            dpg.add_text('Find Contour')
+            dpg.add_separator()
+            # dpg.add_text('Approximation Mode')
+            # dpg.add_listbox(tag='approximationModeListbox', items=['None', 'Simple', 'TC89_L1', 'TC89_KCOS'], width=-1)
             dpg.add_text('Region Size Range (Diameter)')
-            dpg.add_input_float(tag='regionSizeMin', label="Min", default_value=3)
-            dpg.add_input_float(tag='regionSizeMax', label="Max", default_value=50)
+            dpg.add_input_float(tag='regionSizeMin', label="Min", default_value=3, step=-1)
+            dpg.add_input_float(tag='regionSizeMax', label="Max", default_value=50, step=-1)
             with dpg.window(label="ERROR! Max size cannot be smaller than min size!", modal=True, show=False, tag="errRange", no_title_bar=False):
                 dpg.add_text("ERROR: You must reset the size values.")
                 dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("errRange", show=False))
             
-            dpg.add_text('Contour Thickness (For drawing)')
-            dpg.add_slider_int(tag='contourThicknessSlider', default_value=3, min_value=1, max_value=100,  width=-1)
             dpg.add_button(tag='extractContourButton', width=-1, label='Apply Method', callback=lambda sender, app_data: callbacks.contourExtraction.extractContour(sender, app_data))
             with dpg.window(label="ERROR! The image must be in a binary color scheme!", modal=True, show=False, tag="nonBinary", no_title_bar=False):
                 dpg.add_text("ERROR: You must select a binarization filter on the Thresholding Tab.")
@@ -27,17 +28,17 @@ def showContourExtraction(callbacks):
                 dpg.add_text('Extract Plane Coordinates')
 
                 dpg.add_text('Input threshold to find axis points')
-                dpg.add_input_float(tag='axisThreshold', default_value=10)
+                dpg.add_input_float(tag='axisThreshold', default_value=10, step=-1)
                 
                 dpg.add_text('Enter index for each axis')
-                dpg.add_input_int(tag='AxisID_Bottom',label='Bottom ID', default_value=-7)
-                dpg.add_input_int(tag='AxisID_Top',label='Top ID', default_value=7)
-                dpg.add_input_int(tag='AxisID_Left',label='Left ID', default_value=-9)
-                dpg.add_input_int(tag='AxisID_Right',label='Right ID', default_value=9)
-                # dpg.add_input_int(tag='AxisID_Bottom',label='Bottom ID', default_value=-6)
-                # dpg.add_input_int(tag='AxisID_Top',label='Top ID', default_value=7)
-                # dpg.add_input_int(tag='AxisID_Left',label='Left ID', default_value=-13)
-                # dpg.add_input_int(tag='AxisID_Right',label='Right ID', default_value=10)
+                # dpg.add_input_int(tag='AxisID_Bottom',label='Bottom ID', default_value=-7, step=-1)
+                # dpg.add_input_int(tag='AxisID_Top',label='Top ID', default_value=7, step=-1)
+                # dpg.add_input_int(tag='AxisID_Left',label='Left ID', default_value=-9, step=-1)
+                # dpg.add_input_int(tag='AxisID_Right',label='Right ID', default_value=9, step=-1)
+                dpg.add_input_int(tag='AxisID_Bottom',label='Bottom ID', default_value=-6, step=-1)
+                dpg.add_input_int(tag='AxisID_Top',label='Top ID', default_value=7, step=-1)
+                dpg.add_input_int(tag='AxisID_Left',label='Left ID', default_value=-13, step=-1)
+                dpg.add_input_int(tag='AxisID_Right',label='Right ID', default_value=10, step=-1)
                 
                 dpg.add_text('Select the four corners')
                 dpg.add_text('Bottom Left -> Top Left -> Top Right -> Bottom Right')
@@ -54,9 +55,9 @@ def showContourExtraction(callbacks):
             with dpg.group(tag='Extract World Coordinate',show=False):  
                 dpg.add_text('Extract World Coordinates')
                 dpg.add_text('Enter depth coordinate for the plane:')
-                dpg.add_input_float(tag='Axis3',label='In physical unit')
+                dpg.add_input_float(tag='Axis3',label='In physical unit', step=-1)
                 dpg.add_text('Enter distance between calibration dots:')
-                dpg.add_input_float(tag='dist',label='Distance',default_value=0.5)
+                dpg.add_input_float(tag='dist',label='Distance',default_value=0.5, step=-1)
                 dpg.add_text('The world axis for plane axis x is:')
                 dpg.add_listbox(tag='mouseAxisX', items=['x', 'y', 'z'], width=-1, default_value='x')
                 dpg.add_text('The world axis for plane axis y is:')
@@ -125,7 +126,7 @@ def showContourExtraction(callbacks):
                 dpg.add_text("Missing file name or directory.", tag="exportSelectedContourError", show=False)
         
         with dpg.child_window(tag='ContourExtractionParent'):
-            with dpg.plot(tag="ContourExtractionPlotParent", label="ContourExtraction", height=-1 - 50, width=-1):
+            with dpg.plot(tag="ContourExtractionPlotParent", label="ContourExtraction", height=-1, width=-1):
                 dpg.add_plot_legend()
                 dpg.add_plot_axis(dpg.mvXAxis, label="x", tag="ContourExtraction_x_axis")
                 dpg.add_plot_axis(dpg.mvYAxis, label="y", tag="ContourExtraction_y_axis")

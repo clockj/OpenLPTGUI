@@ -1,19 +1,22 @@
 import dearpygui.dearpygui as dpg
 
 def showVSC(callbacks):
+    subwindow_width = dpg.get_item_width('vsc')
+    subwindow_height = dpg.get_item_height('vsc')
+    
     with dpg.group(horizontal=True):
-        with dpg.child_window(width=300,horizontal_scrollbar=True):
+        with dpg.child_window(width=0.3*subwindow_width,horizontal_scrollbar=True):
             
-            with dpg.file_dialog(directory_selector=False, min_size=[400,300], show=False, file_count=20, tag='file_dialog_vscCam', callback=callbacks.vsc.openCamFile, cancel_callback=callbacks.vsc.cancelCamImportFile):
+            with dpg.file_dialog(directory_selector=False, width=0.7*subwindow_width, height=0.9*subwindow_height, min_size=[400,300], show=False, file_count=20, tag='file_dialog_vscCam', callback=callbacks.vsc.openCamFile, cancel_callback=callbacks.vsc.cancelCamImportFile):
                 dpg.add_file_extension("", color=(150, 255, 150, 255))
                 dpg.add_file_extension(".txt", color=(0, 255, 255, 255))
                 
-            with dpg.file_dialog(directory_selector=False, min_size=[400,300], show=False, tag='file_dialog_vscTracks', callback=callbacks.vsc.openTracksFile, cancel_callback=callbacks.vsc.cancelTracksImportFile):
+            with dpg.file_dialog(directory_selector=False, width=0.7*subwindow_width, height=0.9*subwindow_height, min_size=[400,300], show=False, tag='file_dialog_vscTracks', callback=callbacks.vsc.openTracksFile, cancel_callback=callbacks.vsc.cancelTracksImportFile):
                 dpg.add_file_extension("", color=(150, 255, 150, 255))
                 dpg.add_file_extension(".csv", color=(0, 255, 255, 255))
                 dpg.add_file_extension(".txt", color=(0, 255, 255, 255))
             
-            with dpg.file_dialog(directory_selector=False, file_count=20, min_size=[400,300], show=False, tag='file_dialog_vscImg', callback=callbacks.vsc.openImgFile, cancel_callback=callbacks.vsc.cancelImgImportFile):
+            with dpg.file_dialog(directory_selector=False, width=0.7*subwindow_width, height=0.9*subwindow_height, file_count=60, min_size=[400,300], show=False, tag='file_dialog_vscImg', callback=callbacks.vsc.openImgFile, cancel_callback=callbacks.vsc.cancelImgImportFile):
                 dpg.add_file_extension("", color=(150, 255, 150, 255))
                 dpg.add_file_extension(".txt", color=(0, 255, 255, 255))
                 

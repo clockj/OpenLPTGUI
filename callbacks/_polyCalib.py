@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import pandas as pd
 import os.path
+from ._texture import Texture
 
 class PolyCalib:
     def __init__(self) -> None:
@@ -74,6 +75,11 @@ class PolyCalib:
     def cancelImportFile(self, sender = None, app_data = None):
         dpg.hide_item('file_dialog_polyCalib')
     
+    def draw_plus(self, image, center, color=(0, 0, 255), size=5, thickness=1):
+        cx, cy = center
+        cv2.line(image, (cx - size, cy), (cx + size, cy), color, thickness)
+        cv2.line(image, (cx, cy - size), (cx, cy + size), color, thickness)
+
     def calibrateCamera(self, sender = None, app_data = None):
         if len(self.calibFilePath) == 0:
             dpg.configure_item('noPolyPath', show=True)
@@ -116,6 +122,13 @@ class PolyCalib:
         # show reference plane
         dpg.configure_item('polyRefPlane', show=True)
         dpg.configure_item('buttonExportPolyCalib', show=True)
+        
+        # plot points
+        img = np.zeros((self.imgSize[1], self.imgSize[0], 3), np.uint8)
+        for i in range(self.calibPt2D.shape[0]):
+            self.draw_plus(img, (int(round(self.calibPt2D[i,0])), int(round(self.calibPt2D[i,1]))), (0,0,255))
+            cv2.circle(img, (int(imgX[i]), int(imgY[i])), 1, (255,0,0), -1)
+        Texture.createTexture('polyPlot', img)
     
     def selectFolder(self, sender = None, app_data = None):
         self.exportFilePath = app_data['file_path_name']

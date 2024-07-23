@@ -25,13 +25,13 @@ class CamCalibImageProcess:
                 'output': None,
                 'tab': 'Processing'
             },
-            {
-                'method': self.invertImage,
-                'name': self.invertImage.__name__,
-                'status': False,
-                'output': None,
-                'tab': 'Filtering'  
-            },
+            # {
+            #     'method': self.invertImage,
+            #     'name': self.invertImage.__name__,
+            #     'status': False,
+            #     'output': None,
+            #     'tab': 'Filtering'  
+            # },
             {
                 'method': self.setAreaColor,
                 'name': self.setAreaColor.__name__,
@@ -291,14 +291,21 @@ class CamCalibImageProcess:
         
             region = dpg.get_plot_query_area(plot="FilteringPlotParent") 
             
-            colMin = int(region[0])   
-            colMax = int(region[1])
-            rowMax = int(self.height - region[2])
-            rowMin = int(self.height - region[3])
+            color = dpg.get_value('areaColorPicker')
+            if color == 'White':
+                color = [255, 255, 255]
+            else:
+                color = [0, 0, 0]
+                     
+            colMin = max(int(region[0]), 0)   
+            colMax = min(int(region[1]), self.width-1)
+            rowMin = max(int(self.height - region[3]), 0)
+            rowMax = min(int(self.height - region[2]), self.height-1)
+            
             if rowMin != rowMax or colMin != colMax:
-                img[rowMin:rowMax, colMin:colMax, 0] = int(dpg.get_value('areaColorPicker')[2])
-                img[rowMin:rowMax, colMin:colMax, 1] = int(dpg.get_value('areaColorPicker')[1])
-                img[rowMin:rowMax, colMin:colMax, 2] = int(dpg.get_value('areaColorPicker')[0])
+                img[rowMin:rowMax, colMin:colMax, 0] = int(color[2])
+                img[rowMin:rowMax, colMin:colMax, 1] = int(color[1])
+                img[rowMin:rowMax, colMin:colMax, 2] = int(color[0])
             
             self.blocks[Blocks.setAreaColor.value]['output'] = img
             Texture.updateTexture(self.blocks[Blocks.setAreaColor.value]['tab'], img)
@@ -363,18 +370,6 @@ class CamCalibImageProcess:
 
         image = self.blocks[self.getLastActiveBeforeMethod('grayscale')]['output'].copy()
 
-
-        excludeBlue = dpg.get_value('excludeBlueChannel')
-        excludeGreen = dpg.get_value('excludeGreenChannel')
-        excludeRed = dpg.get_value('excludeRedChannel')
-
-        if excludeBlue:
-            image[:, :, 0] = 0
-        if excludeGreen:
-            image[:, :, 1] = 0
-        if excludeRed:
-            image[:, :, 2] = 0
-
         grayMask = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
         image[:, :, 0] = grayMask
@@ -383,7 +378,6 @@ class CamCalibImageProcess:
 
         self.blocks[Blocks.grayscale.value]['output'] = image
         Texture.updateTexture(self.blocks[Blocks.grayscale.value]['tab'], image)
-        pass
 
     def laplacian(self, sender=None, app_data=None):
         image = self.blocks[Blocks.grayscale.value]['output'].copy()
@@ -518,16 +512,12 @@ class CamCalibImageProcess:
 
     def enableAllTags(self):
         checkboxes = [
-            'invertImageCheckbox',
             'setAreaColorCheckbox',
             'histogramCheckbox',
             'brightnessAndContrastCheckbox',
             'averageBlurCheckbox',
             'gaussianBlurCheckbox',
             'medianBlurCheckbox',
-            'excludeBlueChannel',
-            'excludeGreenChannel',
-            'excludeRedChannel',
             'laplacianCheckbox',
             'sobelCheckbox',
             'globalThresholdingCheckbox',
@@ -546,16 +536,12 @@ class CamCalibImageProcess:
 
     def disableAllTags(self):
         checkboxes = [
-            'invertImageCheckbox',
             'setAreaColorCheckbox',
             'histogramCheckbox',
             'brightnessAndContrastCheckbox',
             'averageBlurCheckbox',
             'gaussianBlurCheckbox',
             'medianBlurCheckbox',
-            'excludeBlueChannel',
-            'excludeGreenChannel',
-            'excludeRedChannel',
             'laplacianCheckbox',
             'sobelCheckbox',
             'globalThresholdingCheckbox',
@@ -574,16 +560,12 @@ class CamCalibImageProcess:
 
     def uncheckAllTags(self):
         checkboxes = [
-            'invertImageCheckbox',
             'setAreaColorCheckbox',
             'histogramCheckbox',
             'brightnessAndContrastCheckbox',
             'averageBlurCheckbox',
             'gaussianBlurCheckbox',
             'medianBlurCheckbox',
-            'excludeBlueChannel',
-            'excludeGreenChannel',
-            'excludeRedChannel',
             'laplacianCheckbox',
             'sobelCheckbox',
             'globalThresholdingCheckbox',

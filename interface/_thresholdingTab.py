@@ -1,14 +1,10 @@
 import dearpygui.dearpygui as dpg
 
 def showThresholding(callbacks):
+    subwindow_width = dpg.get_item_width('calibPlate')
+    
     with dpg.group(horizontal=True):
-        with dpg.child_window(width=300):
-
-            dpg.add_text('Grayscale Conversion')
-            dpg.add_checkbox(label='Exclude Blue Channel', tag='excludeBlueChannel', callback=lambda: callbacks.imageProcessing.executeQuery('grayscale'))
-            dpg.add_checkbox(label='Exclude Green Channel', tag='excludeGreenChannel', callback=lambda: callbacks.imageProcessing.executeQuery('grayscale'))
-            dpg.add_checkbox(label='Exclude Red Channel', tag='excludeRedChannel', callback=lambda: callbacks.imageProcessing.executeQuery('grayscale'))
-            dpg.add_separator()
+        with dpg.child_window(width=0.3*subwindow_width, horizontal_scrollbar=True):
 
             with dpg.group(horizontal=True):
                 dpg.add_checkbox(tag='laplacianCheckbox', callback=lambda sender, app_data: callbacks.imageProcessing.toggleAndExecuteQuery('laplacian', sender, app_data))

@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import pandas as pd
 import os.path
+from ._texture import Texture
 
 class OpencvCalib:
     def __init__(self) -> None:
@@ -23,6 +24,7 @@ class OpencvCalib:
         self.posecalibData = None # list of pandas dataframes
         self.posecalibPt2D = None #
         self.posecalibPt3D = None #
+        self.img = None
         
         # Output: camera parameter
         self.camcalibErr = None
@@ -33,7 +35,11 @@ class OpencvCalib:
         self.rotVec = None
         self.rotMat = None
         self.transVec = None
-        
+    
+    def draw_plus(self, image, center, color=(0, 0, 255), size=5, thickness=1):
+        cx, cy = center
+        cv2.line(image, (cx - size, cy), (cx + size, cy), color, thickness)
+        cv2.line(image, (cx, cy - size), (cx, cy + size), color, thickness)
 
     def calibrateCamera(self, sender=None, app_data=None):
         if len(self.camcalibFilePath) == 0:
@@ -46,16 +52,26 @@ class OpencvCalib:
         self.imgSize = (width, height)
 
         # Perform camera calibration
-        if dpg.get_value('useTsaiCalib') == True:
-            flags = cv2.CALIB_FIX_PRINCIPAL_POINT + cv2.CALIB_FIX_K1 + cv2.CALIB_FIX_K2 + cv2.CALIB_FIX_K3 + cv2.CALIB_ZERO_TANGENT_DIST + cv2.CALIB_FIX_ASPECT_RATIO
+        flags = 0
+        aspect_ratio = dpg.get_value('fixAspectRatio')
+        if aspect_ratio:
+            flags += cv2.CALIB_FIX_ASPECT_RATIO 
+        
+        principal_point = dpg.get_value('fixPrincipalPoint')
+        if principal_point:
+            flags += cv2.CALIB_FIX_PRINCIPAL_POINT
+        
+        dist_model = dpg.get_value('distortionModel')
+        if dist_model == 'Zero':
+            flags += cv2.CALIB_FIX_K1 + cv2.CALIB_FIX_K2 + cv2.CALIB_FIX_K3 + cv2.CALIB_ZERO_TANGENT_DIST
+        elif dist_model == 'Radial: 2nd':
+            flags += cv2.CALIB_FIX_K2 + cv2.CALIB_FIX_K3 + cv2.CALIB_ZERO_TANGENT_DIST
+        elif dist_model == 'Full':
+            flags += 0
             
-            self.camcalibErr, self.camMat, self.distCoeff, _, _ = cv2.calibrateCamera(
-                self.camcalibPt3D, self.camcalibPt2D, self.imgSize, None, None, flags=flags
-            )
-        else:
-            self.camcalibErr, self.camMat, self.distCoeff, _, _ = cv2.calibrateCamera(
-                self.camcalibPt3D, self.camcalibPt2D, self.imgSize, None, None
-            )
+        self.camcalibErr, self.camMat, self.distCoeff, _, _ = cv2.calibrateCamera(
+            self.camcalibPt3D, self.camcalibPt2D, self.imgSize, None, None, flags=flags
+        )
         
         # Print outputs onto the output window 
         dpg.configure_item('opencvCalibGroup', show=True)
@@ -91,6 +107,13 @@ class OpencvCalib:
         self.posecalibErr = cv2.norm(pt2D, self.posecalibPt2D, cv2.NORM_L2)/self.posecalibPt2D.shape[0]
         print('max err:', np.max(np.linalg.norm(pt2D - self.posecalibPt2D, axis=2)))
         print('std err:', np.std(np.linalg.norm(pt2D - self.posecalibPt2D, axis=2)))
+        
+        # plot calibration points  
+        img = self.img.copy()      
+        for i in range(pt2D.shape[0]):
+            cv2.circle(img, (int(round(pt2D[i,0,1])), int(round(pt2D[i,0,0]))), 1, (0, 0, 255))
+        
+        Texture.updateTexture("calibPlot", img)
         
         # Print outputs onto the output window 
         dpg.set_value('opencvPosecalibErr', f'Pose Calibration Error: {self.posecalibErr}')
@@ -190,6 +213,13 @@ class OpencvCalib:
             with dpg.table_row(parent='opencvPosecalibFileTable'):
                 dpg.add_text(self.posecalibFileName[i])
                 dpg.add_text(self.posecalibFilePath[i])
+        
+        img = np.zeros((self.imgSize[0], self.imgSize[1], 3), np.uint8)
+        # plot previous calibration points 
+        for i in range(pt2d.shape[0]):
+            self.draw_plus(img, (int(round(pt2d[i,1])), int(round(pt2d[i,0]))), (255, 0, 0))   
+        self.img = img.copy()
+        Texture.createTexture("calibPlot", img)
     
     def cancelPoseCalibImportFile(self, sender = None, app_data = None):
         dpg.hide_item("file_dialog_opencvPoseCalib")

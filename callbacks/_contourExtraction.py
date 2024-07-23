@@ -48,7 +48,12 @@ class ContourExtraction:
                                              # BR
         self.ptXYID = None
         self.centerExport = None # WorldX,WorldY,WorldZ,Row,Col,MouseX,MouseY
-                                          
+    
+    def draw_plus(self, image, center, color=(0, 0, 255), size=5, thickness=1):
+        cx, cy = center
+        cv2.line(image, (cx - size, cy), (cx + size, cy), color, thickness)
+        cv2.line(image, (cx, cy - size), (cx, cy + size), color, thickness)
+                                      
     def extractContour(self, sender=None, app_data=None):
 
         globalThresholdSelectedFlag = dpg.get_value('globalThresholdingCheckbox')
@@ -62,11 +67,15 @@ class ContourExtraction:
 
         image = self.imageProcessing.blocks[self.imageProcessing.getLastActiveBeforeMethod('findContour')]['output'].copy()
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        
+        image_plot = self.imageProcessing.blocks[self.imageProcessing.getLastActiveBeforeMethod('importImage')]['output'].copy()
+        
         self.height = image.shape[0]
         self.width = image.shape[1]
 
         approximationMode = None
-        value = dpg.get_value('approximationModeListbox')
+        # value = dpg.get_value('approximationModeListbox')
+        value = 'None'
         if value == 'None':
             approximationMode = cv2.CHAIN_APPROX_NONE
         elif value == 'Simple':
@@ -76,30 +85,30 @@ class ContourExtraction:
         elif value == 'TC89_KCOS':
             approximationMode = cv2.CHAIN_APPROX_TC89_KCOS
 
-        areaMin = dpg.get_value("regionSizeMin")**2
-        areaMax = dpg.get_value("regionSizeMax")**2
-        if areaMin > areaMax:
+        diaMin = dpg.get_value("regionSizeMin")
+        diaMax = dpg.get_value("regionSizeMax")
+        if diaMin > diaMax:
             dpg.configure_item('errRange', show=True)
             return
-        # cnts, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, approximationMode)
-        cnts, _ = cv2.findContours(image, cv2.RETR_LIST, approximationMode)
+
+        contours, _ = cv2.findContours(image, cv2.RETR_LIST, approximationMode)
         image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
-        contours = ()
-        for c in cnts:
-            area = cv2.contourArea(c)
-            if area >= areaMin and area <= areaMax:
-                contours += (c,)
 
         self.removeContour()
 
-        thicknessValue = dpg.get_value('contourThicknessSlider')
+        thicknessValue = 1
         self.contourCenters = np.zeros(shape=(len(contours),2))
         for idx, contour in enumerate(contours):
-            contourColor = (random.randint(0,255),random.randint(0,255),random.randint(0,255), 255)
+            # contourColor = (random.randint(0,255),random.randint(0,255),random.randint(0,255), 255)
+            contourColor = (0,0,255, 255)
             contourColorBGR = (contourColor[2], contourColor[1], contourColor[0])
             
             area = cv2.contourArea(contour)
             (col,row),radius = cv2.minEnclosingCircle(contour)
+            
+            if radius < diaMin/2 or radius > diaMax/2:
+                continue
+            
             centerX = col
             centerY = self.height - row
             self.contourCenters[idx,0] = centerX
@@ -117,10 +126,10 @@ class ContourExtraction:
                     'cntRow': [x[0][1] for x in contour],
                 }
             )
-            center = (int(col),int(row))
+            center = (int(round(col)),int(round(row)))
             radius = int(radius)
-            cv2.circle(image,center,3,(0,0,255),-1)
-            cv2.circle(image,center,radius,contourColorBGR,thicknessValue) 
+            self.draw_plus(image_plot, center, color=(0, 0, 255), size=5, thickness=1)
+            cv2.circle(image_plot, center, radius, contourColorBGR, thicknessValue) 
             # cv2.drawContours(image, contour, -1, contourColor, thicknessValue)
 
         self.contourTableEntry = list(sorted(self.contourTableEntry, key=lambda x: x['radius'], reverse=True))
@@ -132,11 +141,7 @@ class ContourExtraction:
         dpg.add_separator(tag='separator3', parent='ContourExtractionParent')
         dpg.add_button(tag='exportSelectedContours', width=-1, label='Export Selected Contours as Files', parent='ContourExtractionParent', callback=self.exportSelectedButtonCall)
         dpg.add_separator(tag='separator4', parent='ContourExtractionParent')
-        with dpg.table(tag='ContourExtractionTable', header_row=True, policy=dpg.mvTable_SizingFixedFit, row_background=True,
-            resizable=True, no_host_extendX=False, hideable=True,
-            borders_innerV=True, delay_search=True, borders_outerV=True, borders_innerH=True,
-            borders_outerH=True, parent='ContourExtractionParent'):
-
+        with dpg.table(tag='ContourExtractionTable', header_row=True, policy=dpg.mvTable_SizingFixedFit, row_background=True, resizable=True, no_host_extendX=False, hideable=True,borders_innerV=True, delay_search=True, borders_outerV=True, borders_innerH=True, borders_outerH=True, parent='ContourExtractionParent'):
             dpg.add_table_column(label="Id", width_fixed=True)
             dpg.add_table_column(label="Color", width_fixed=True)
             dpg.add_table_column(label="Visible", width_fixed=True)
@@ -162,8 +167,9 @@ class ContourExtraction:
                         if j == 5:
                             dpg.add_button(label='Export Individual Contour', tag="exportContour" + str(contourEntry['id']), callback=self.exportButtonCall)
 
-        self.imageProcessing.blocks[Blocks.findContour.value]['output'] = image
-        Texture.updateTexture(self.imageProcessing.blocks[Blocks.findContour.value]['tab'], image)
+        self.imageProcessing.blocks[Blocks.findContour.value]['output'] = image_plot
+        # Texture.updateTexture(self.imageProcessing.blocks[Blocks.findContour.value]['tab'], image)
+        Texture.updateTexture(self.imageProcessing.blocks[Blocks.findContour.value]['tab'], image_plot)
         
         dpg.configure_item('Extract Plane Coordinate', show=True)
 
@@ -245,41 +251,21 @@ class ContourExtraction:
         
         # find axis points
         axisThreshold = dpg.get_value('axisThreshold')
-        leftAxisPoints, axisPtID = self.findAxisPoints([ptBL, ptTL], centers, axisThreshold, 'y')
-        if len(axisPtID) != ny:
-            dpg.configure_item('errAxisPoints', show=True)
-            dpg.add_text(f'Left Axis Points: {len(axisPtID)}', parent='errAxisPoints')
-            dpg.add_text(str(leftAxisPoints), parent='errAxisPoints')
-            return
-        self.ptXYID[axisPtID,2] = LeftID
-        self.ptXYID[axisPtID,3] = np.array(list(range(BottomID, TopID+1*signY, signY)), dtype=np.int32)
+        leftAxisPoints, origID, axisID = self.findAxisPoints([ptBL, ptTL], centers, axisThreshold, 'y', ny, BottomID, TopID, signY)
+        self.ptXYID[origID,2] = LeftID
+        self.ptXYID[origID,3] = axisID
 
-        rightAxisPoints, axisPtID = self.findAxisPoints([ptBR, ptTR], centers, axisThreshold, 'y')
-        if len(axisPtID) != ny:
-            dpg.configure_item('errAxisPoints', show=True)
-            dpg.add_text(f'Right Axis Points: {len(axisPtID)}', parent='errAxisPoints')
-            dpg.add_text(str(rightAxisPoints), parent='errAxisPoints')
-            return
-        self.ptXYID[axisPtID,2] = RightID
-        self.ptXYID[axisPtID,3] = np.array(list(range(BottomID, TopID+1*signY, signY)), dtype=np.int32)
+        rightAxisPoints, origID, axisID = self.findAxisPoints([ptBR, ptTR], centers, axisThreshold, 'y', ny, BottomID, TopID, signY)
+        self.ptXYID[origID,2] = RightID
+        self.ptXYID[origID,3] = axisID
         
-        topAxisPoints, axisPtID = self.findAxisPoints([ptTL, ptTR], centers, axisThreshold, 'x')
-        if len(axisPtID) != nx:
-            dpg.configure_item('errAxisPoints', show=True)
-            dpg.add_text(f'Top Axis Points: {len(axisPtID)}', parent='errAxisPoints')
-            dpg.add_text(str(topAxisPoints), parent='errAxisPoints')
-            return
-        self.ptXYID[axisPtID,2] = np.array(list(range(LeftID, RightID+1*signX, signX)), dtype=np.int32)
-        self.ptXYID[axisPtID,3] = TopID
+        topAxisPoints, origID, axisID = self.findAxisPoints([ptTL, ptTR], centers, axisThreshold, 'x', nx, LeftID, RightID, signX)
+        self.ptXYID[origID,2] = axisID
+        self.ptXYID[origID,3] = TopID
         
-        bottomAxisPoints, axisPtID = self.findAxisPoints([ptBL, ptBR], centers, axisThreshold, 'x')
-        if len(axisPtID) != nx:
-            dpg.configure_item('errAxisPoints', show=True)
-            dpg.add_text(f'Bottom Axis Points: {len(axisPtID)}', parent='errAxisPoints')
-            dpg.add_text(str(bottomAxisPoints), parent='errAxisPoints')
-            return
-        self.ptXYID[axisPtID,2] = np.array(list(range(LeftID, RightID+1*signX, signX)), dtype=np.int32)
-        self.ptXYID[axisPtID,3] = BottomID
+        bottomAxisPoints, origID, axisID = self.findAxisPoints([ptBL, ptBR], centers, axisThreshold, 'x', nx, LeftID, RightID, signX)
+        self.ptXYID[origID,2] = axisID
+        self.ptXYID[origID,3] = BottomID
         
         # find internal points
         for i in range(1,nx-1):
@@ -342,33 +328,83 @@ class ContourExtraction:
         sinTheta = np.sqrt(1 - cosTheta**2)
         return sinTheta * diffMag
     
-    def findAxisPoints(self, axisBoundary, centers, threshold, axisName): 
+    def findAxisPoints(self, axisBoundary, centers, threshold, axisName, npts, startID, endID, sign): 
+        # centers: mouseX, mouseY
+        # axisBoundary: [ptStart, ptEnd]
+        
         pt1, pt2 = axisBoundary       
         lineVec = pt2 - pt1
-        lineVec /= np.linalg.norm(lineVec)
+        length = np.linalg.norm(lineVec)
+        unit_length = length / (npts - 1)
+        lineVec /= length
         
         # calculate distance from each contour center to the line
         distance = self.findPointLineDistance(centers, [pt1, lineVec])
         
-        
+        origPoints_temp = np.array([])
+        origID_temp = np.array([])
         if axisName == 'x':
-            axisPtID = np.where((distance < threshold) & (centers[:,0] > pt1[0] - threshold) & (centers[:,0] < pt2[0] + threshold))[0]
-            
-            axisPoints = np.reshape(centers[axisPtID,:], (-1,2))
-            x = axisPoints[:,0]
+            origID_temp = np.where((distance < threshold) & (centers[:,0] > pt1[0] - threshold) & (centers[:,0] < pt2[0] + threshold))[0]
+            origPoints_temp = np.reshape(centers[origID_temp,:], (-1,2))
+            x = origPoints_temp[:,0]
             id = np.argsort(x)
-            
+            origPoints_temp = origPoints_temp[id,:]
+            origID_temp = origID_temp[id]
+                
         elif axisName == 'y':
-            axisPtID = np.where((distance < threshold) & (centers[:,1] > pt1[1] - threshold) & (centers[:,1] < pt2[1] + threshold))[0]
-            
-            axisPoints = np.reshape(centers[axisPtID,:], (-1,2))
-            y = axisPoints[:,1]
+            origID_temp = np.where((distance < threshold) & (centers[:,1] > pt1[1] - threshold) & (centers[:,1] < pt2[1] + threshold))[0]
+            origPoints_temp = np.reshape(centers[origID_temp,:], (-1,2))
+            y = origPoints_temp[:,1]
             id = np.argsort(y)
-            
-        axisPoints = axisPoints[id,:]
-        axisPtID = axisPtID[id]
+            origPoints_temp = origPoints_temp[id,:]
+            origID_temp = origID_temp[id]
         
-        return list(axisPoints), axisPtID
+        # remove duplicate points
+        is_duplicate = np.array([False] * origPoints_temp.shape[0])
+        # print(origPoints_temp.shape[0])
+        for i in range(origPoints_temp.shape[0]-1):
+            if is_duplicate[i]:
+                continue
+            for j in range(i+1, origPoints_temp.shape[0]):
+                if is_duplicate[j]:
+                    continue
+                if np.linalg.norm(origPoints_temp[i,:] - origPoints_temp[j,:]) < threshold:
+                    # remove the point with larger distance to the line
+                    if distance[origID_temp[i]] < distance[origID_temp[j]]:
+                        is_duplicate[j] = True
+                    else:
+                        is_duplicate[i] = True
+        origPoints = origPoints_temp[np.logical_not(is_duplicate),:]
+        origID = origID_temp[np.logical_not(is_duplicate)]
+        
+        axisID = np.zeros_like(origID)
+        axisPoints = np.zeros(shape=(npts,2))
+        if origPoints.shape[0] == npts:
+            axisPoints = origPoints
+            axisID = np.array(list(range(startID, endID+1*sign, sign)), dtype=np.int32)
+        else:
+            axisPoints = np.linspace(pt1, pt2, npts)
+            axisID = np.zeros(origPoints.shape[0], dtype=np.int32)
+            for i in range(origPoints.shape[0]):
+                is_found = False
+                iter = 0
+                threshold_iter = unit_length/2
+                while not is_found:
+                    for j in range(npts):
+                        if np.linalg.norm(origPoints[i,:] - axisPoints[j,:]) < threshold_iter:
+                            is_found = True
+                            axisID[i] = startID + j * sign
+                            axisPoints[j,:] = origPoints[i,:]
+                            if j > 0 and j < npts-1:
+                                axisPoints[j+1,:] = 2*axisPoints[j,:] - axisPoints[j-1,:]
+                            break
+                    threshold_iter *= 1.5
+                    iter += 1
+                    if iter > 10:
+                        RuntimeError('findAxisPoints Error: Cannot find the point on the axis' + str(origPoints[i,:]) + '\n' + str(threshold_iter) + '\n' + str(axisPoints))
+                        break
+            
+        return axisPoints, origID, axisID
     
     def extractWorldCoordinate(self, sender=None, app_data=None):
         mouseAxisXTag = dpg.get_value('mouseAxisX')
@@ -458,9 +494,10 @@ class ContourExtraction:
         pass
 
     def redrawContours(self):
-        image = self.imageProcessing.blocks[self.imageProcessing.getLastActiveBeforeMethod('findContour')]['output'].copy()
+        # image = self.imageProcessing.blocks[self.imageProcessing.getLastActiveBeforeMethod('findContour')]['output'].copy()
+        image_plot = self.imageProcessing.blocks[self.imageProcessing.getLastActiveBeforeMethod('importImage')]['output'].copy()
 
-        thicknessValue = dpg.get_value('contourThicknessSlider')
+        thicknessValue = 1
 
         for entry in self.contourTableEntry:
             drawContour = dpg.get_value('checkboxContourId' + str(entry['id']))
@@ -471,16 +508,16 @@ class ContourExtraction:
                 self.contourCenters[entry['id'],1] = centerY
                 radius = entry['radius']
                 
-                center = (int(centerX),int(self.height-centerY)) # convert into cv2 coordinate
+                center = (int(round(centerX)),int(round(self.height-centerY))) # convert into cv2 coordinate
                 radius = int(radius)
-                cv2.circle(image,center,3,(0,0,255),-1)
-                cv2.circle(image,center,radius,(entry['color'][2], entry['color'][1], entry['color'][0]),thicknessValue) 
+                self.draw_plus(image_plot, center, color=(0, 0, 255), size=5, thickness=1)
+                cv2.circle(image_plot,center,radius,(entry['color'][2], entry['color'][1], entry['color'][0]),thicknessValue) 
                 # cv2.drawContours(image, entry['data'], -1, (entry['color'][2], entry['color'][1], entry['color'][0]), thicknessValue)
             else:
                 self.contourCenters[entry['id'],:] = None
 
-        self.imageProcessing.blocks[Blocks.findContour.value]['output'] = image
-        Texture.updateTexture(self.imageProcessing.blocks[Blocks.findContour.value]['tab'], image)
+        self.imageProcessing.blocks[Blocks.findContour.value]['output'] = image_plot
+        Texture.updateTexture(self.imageProcessing.blocks[Blocks.findContour.value]['tab'], image_plot)
 
     def hideAllContours(self, sender = None, app_data = None):
         for entry in self.contourTableEntry:

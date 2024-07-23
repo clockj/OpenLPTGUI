@@ -1,10 +1,13 @@
 import dearpygui.dearpygui as dpg
 
 def showPolyCalib(callbacks):
+    subwindow_width = dpg.get_item_width('polyCalib')
+    subwindow_height = dpg.get_item_height('polyCalib')
+    
     with dpg.group(horizontal=True):
-        with dpg.child_window(width=300,horizontal_scrollbar=True):
+        with dpg.child_window(width=0.3*subwindow_width,horizontal_scrollbar=True):
             
-            with dpg.file_dialog(directory_selector=False, min_size=[400,300], show=False, file_count=20, tag='file_dialog_polyCalib', callback=callbacks.polyCalib.openFile, cancel_callback=callbacks.polyCalib.cancelImportFile):
+            with dpg.file_dialog(directory_selector=False, width=0.7*subwindow_width, height=0.9*subwindow_height, min_size=[400,300], show=False, file_count=20, tag='file_dialog_polyCalib', callback=callbacks.polyCalib.openFile, cancel_callback=callbacks.polyCalib.cancelImportFile):
                 dpg.add_file_extension("", color=(150, 255, 150, 255))
                 dpg.add_file_extension(".csv", color=(0, 255, 255, 255))
                 dpg.add_file_extension(".txt", color=(0, 255, 255, 255))
@@ -16,10 +19,10 @@ def showPolyCalib(callbacks):
             
             with dpg.group(horizontal=True):
                 dpg.add_text('Image Width')
-                dpg.add_input_int(tag='inputPolyCamWidth', default_value=1280)
+                dpg.add_input_int(tag='inputPolyCamWidth', default_value=1280, step=-1)
             with dpg.group(horizontal=True):
                 dpg.add_text('Image Height')
-                dpg.add_input_int(tag='inputPolyCamHeight', default_value=800)
+                dpg.add_input_int(tag='inputPolyCamHeight', default_value=800, step=-1)
             
             with dpg.group(horizontal=True):
                 dpg.add_text('Order of polynomial')
@@ -36,15 +39,15 @@ def showPolyCalib(callbacks):
                 
                 with dpg.group(horizontal=True):
                     dpg.add_text('Loaction 1: ')
-                    dpg.add_input_float(tag='inputPolyRefPlane_1', default_value=0.0)
+                    dpg.add_input_float(tag='inputPolyRefPlane_1', default_value=0.0, step=-1)
                 with dpg.group(horizontal=True):
                     dpg.add_text('Loaction 2: ')
-                    dpg.add_input_float(tag='inputPolyRefPlane_2', default_value=5)
+                    dpg.add_input_float(tag='inputPolyRefPlane_2', default_value=5, step=-1)
             
             dpg.add_separator()
             dpg.add_button(tag="buttonExportPolyCalib",label='Export Coefficients', callback=lambda: dpg.show_item("exportPolyCalib"), show=False)
             
-            with dpg.window(label="Save Files", modal=False, show=False, tag="exportPolyCalib", no_title_bar=False, min_size=[600,255]):
+            with dpg.window(label="Save Files", modal=False, show=False, tag="exportPolyCalib", no_title_bar=False, width=0.5*subwindow_width, height=0.5*subwindow_height, min_size=[600,255]):
                 dpg.add_text("Name your file")
                 dpg.add_input_text(tag='inputPolyCalibFileText')
                 dpg.add_separator()
@@ -52,7 +55,7 @@ def showPolyCalib(callbacks):
                 
                 dpg.add_button(label='Select the directory', width=-1, callback=lambda: dpg.show_item("folderExportPolyCalib"))
 
-                dpg.add_file_dialog(directory_selector=True, min_size=[400,300], show=False, tag='folderExportPolyCalib', id="folderExportPolyCalib", callback=callbacks.polyCalib.selectFolder)
+                dpg.add_file_dialog(directory_selector=True, width=0.7*subwindow_width, height=0.9*subwindow_height, min_size=[400,300], show=False, tag='folderExportPolyCalib', id="folderExportPolyCalib", callback=callbacks.polyCalib.selectFolder)
                 
                 dpg.add_separator()
                 dpg.add_text('File Default Name: ', tag='exportPolyFileName')
@@ -69,7 +72,12 @@ def showPolyCalib(callbacks):
             dpg.add_separator()
         
         with dpg.child_window(tag='polyOutputParent'):
-            
+            with dpg.plot(tag="polyPlotParent", label="Calibration Points", height=-1, width=-1):
+                dpg.add_plot_legend()
+                dpg.add_plot_axis(dpg.mvXAxis, label="x", tag="polyPlot_x_axis")
+                dpg.add_plot_axis(dpg.mvYAxis, label="y", tag="polyPlot_y_axis", invert=True)
+                
+            dpg.add_separator()
             dpg.add_text('Polynomial Calibration Outputs')
             
             dpg.add_text('Input Files:')

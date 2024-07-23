@@ -11,7 +11,7 @@ def get_correct_path(relative_path):
         relative_path
     )
 
-def applyTheme():
+def applyTheme(fontsize=20, bordersize=1):
 
     dpg.set_viewport_small_icon("icons/RuiLab.ico")
     dpg.set_viewport_large_icon("icons/RuiLab.ico")
@@ -29,9 +29,8 @@ def applyTheme():
             dpg.add_theme_style(dpg.mvStyleVar_GrabMinSize, 20)
 
             # Border Styles
-            dpg.add_theme_style(dpg.mvStyleVar_WindowBorderSize, 1)
-            dpg.add_theme_style(dpg.mvStyleVar_WindowBorderSize, 1)
-            dpg.add_theme_style(dpg.mvStyleVar_PopupBorderSize, 1)
+            dpg.add_theme_style(dpg.mvStyleVar_WindowBorderSize, bordersize)
+            dpg.add_theme_style(dpg.mvStyleVar_PopupBorderSize, bordersize)
             dpg.add_theme_style(dpg.mvStyleVar_FrameBorderSize, 0)
 
             # Rounding Style
@@ -62,7 +61,7 @@ def applyTheme():
 
     try:
         with dpg.font_registry():
-            default_font = dpg.add_font(fontPath, 20)
+            default_font = dpg.add_font(fontPath, fontsize)
 
         dpg.bind_font(default_font)
     except:
