@@ -88,7 +88,7 @@ def showOpenCVCalib(callbacks):
             dpg.add_text('Camera Calibraion Files:')
             with dpg.table(header_row=True, policy=dpg.mvTable_SizingFixedFit, row_background=True,
             resizable=True, no_host_extendX=False, hideable=True, 
-            borders_innerV=True, delay_search=True, scrollY=True, height=200,  borders_outerV=True, borders_innerH=True,
+            borders_innerV=True, delay_search=True, scrollY=True, height=0.2*subwindow_height,  borders_outerV=True, borders_innerH=True,
             borders_outerH=True, tag='opencvCamcalibFileTable'):
                 dpg.add_table_column(label='File Name', width_fixed=False)
                 dpg.add_table_column(label='File Path', width_fixed=False, width=-1)

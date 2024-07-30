@@ -121,6 +121,7 @@ class LptImgProcess:
         
         # configurate listbox for selecting sample image 
         dpg.configure_item('lptImgShowID', items=self.camName)
+        dpg.configure_item('lptImgFrameID', max_value=max(self.nFrame)-1)
         self.importImg()
         
         # enable all tags
@@ -404,10 +405,16 @@ class LptImgProcess:
         
         # run batch
         nThreads = dpg.get_value('lptImgThreadNum')
+        frame_start = dpg.get_value('lptImgFrameRangeStart')
+        frame_end = dpg.get_value('lptImgFrameRangeEnd')
         for camID in range(len(self.imgFileName)):
             with open(self.imgFilePath[camID], 'r') as f:
                 lines = f.readlines()
                 nFrame = len(lines)
+                
+                if nFrame < frame_end:
+                    frame_end = nFrame
+                    print(f'Warning: {self.camName[camID]} has less than {frame_end} frames!')
             
             # get background image
             if removeBkgFlag is True:
@@ -416,7 +423,7 @@ class LptImgProcess:
                 params['bkg'] = bkg
             
             with Pool(nThreads) as pool:
-                pool.starmap(self.batchTask, zip(itertools.repeat(camID), list(range(nFrame)), itertools.repeat(params)))
+                pool.starmap(self.batchTask, zip(itertools.repeat(camID), list(range(frame_start, frame_end+1)), itertools.repeat(params)))
         
         print('Batch processing finished!')
         dpg.set_value('lptImgExportStatus', 'Status: Finish!')
@@ -453,4 +460,53 @@ class LptImgProcess:
         # save image
         exportPath = os.path.join(self.exportFolderPath, self.camName[camID], imgName)
         cv2.imwrite(exportPath, image)
+
+
+class LptCreateImgFile:
+    def __init__(self) -> None:
+        self.mainFolder = None 
+        self.imgFolderList = []
+        self.nameFormat = None 
+        
+        self.outputFolder = None
     
+    def openFolder(self, sender=None, app_data=None):
+        self.mainFolder = app_data['file_path_name']
+        
+        # List all items in the parent directory
+        all_items = os.listdir(self.mainFolder)
+
+        # Filter out only directories
+        self.imgFolderList = [item for item in all_items if os.path.isdir(os.path.join(self.mainFolder, item))]
+
+        # Print the list of folders and its corresponding name 
+        for tag in dpg.get_item_children('lptCreateImgfileTable')[1]:
+            dpg.delete_item(tag)
+            
+        for i in range(len(self.imgFolderList)):
+            folder = self.imgFolderList[i]
+            with dpg.table_row(parent='lptCreateImgfileTable'):
+                dpg.add_text('cam'+str(i+1))
+                dpg.add_text(os.path.join(self.mainFolder, folder))
+        
+    def cancelImportFolder(self, sender=None, app_data=None):
+        dpg.hide_item("file_dialog_createImgfile")
+    
+    def selectOutputFolder(self, sender=None, app_data=None):
+        self.outputFolder = app_data['file_path_name']
+    
+    def createImgFiles(self, sender=None, app_data=None):
+        # get parameters
+        nameFormat = dpg.get_value('lptImgNameFormat')
+        frameStart = dpg.get_value('lptImgFileFrameStart')
+        frameEnd = dpg.get_value('lptImgFileFrameEnd')
+        
+        # create image files
+        for i in range(len(self.imgFolderList)):
+            with open(os.path.join(self.outputFolder, 'cam{:d}ImageNames.txt'.format(i+1)), 'w') as f:
+                for j in range(frameStart, frameEnd+1):
+                    imgName = nameFormat.format(j)
+                    imgPath = os.path.join(self.mainFolder, self.imgFolderList[i], imgName)
+                    f.write(imgPath + '\n')
+        
+        dpg.set_value('lptImgFileExportStatus', 'Export Image File Status: Finish!')

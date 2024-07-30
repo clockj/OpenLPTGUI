@@ -1,6 +1,53 @@
 import dearpygui.dearpygui as dpg
 
 def showImgProcess(callbacks):
+    with dpg.tab_bar():
+        with dpg.tab(label='1. Create Image Files (Optional)'):
+            showCreateImgFile(callbacks)
+        with dpg.tab(label='2. Image Processing'):
+            showActualImgProcess(callbacks)
+        
+    
+def showCreateImgFile(callbacks):
+    subwindow_width = dpg.get_item_width('imgProcess')
+    subwindow_height = dpg.get_item_height('imgProcess')
+    
+    with dpg.group(horizontal=True):
+        with dpg.child_window(width=0.3*subwindow_width, horizontal_scrollbar=True):
+            with dpg.file_dialog(directory_selector=True, width=0.7*subwindow_width, height=0.9*subwindow_height, min_size=[400,300], file_count=20, show=False, tag='file_dialog_createImgfile', callback=callbacks.lptCreateImgFile.openFolder, cancel_callback=callbacks.lptCreateImgFile.cancelImportFolder):
+                dpg.add_file_extension("", color=(150, 255, 150, 255))
+
+            dpg.add_text('1. Select Image Main Folder')
+            dpg.add_button(label='Select', callback=lambda: dpg.show_item("file_dialog_createImgfile"))
+            dpg.add_separator()
+            
+            dpg.add_text('2. Input Image Name Format:')
+            dpg.add_input_text(tag='lptImgNameFormat', default_value='img{:05d}.tif', width=-1)
+            dpg.add_separator()
+            
+            dpg.add_text('3. Create Image Files')
+            dpg.add_text('Input Frame Range')
+            dpg.add_input_int(tag='lptImgFileFrameStart', default_value=0, min_value=0, width=-1, step=-1, label='Start')
+            dpg.add_input_int(tag='lptImgFileFrameEnd', default_value=1000, min_value=0, width=-1, step=-1, label='End')
+            dpg.add_file_dialog(directory_selector=True, width=0.7*subwindow_width, height=0.9*subwindow_height, min_size=[400,300], show=False, tag='lptImgFileOutputDialog', callback=callbacks.lptCreateImgFile.selectOutputFolder, cancel_callback=lambda: dpg.configure_item('lptImgFileOutputDialog', show=False))
+            dpg.add_button(label='Select Output Folder', callback=lambda: dpg.show_item("lptImgFileOutputDialog"))
+            dpg.add_button(label='Create Files', callback=callbacks.lptCreateImgFile.createImgFiles)
+            dpg.add_separator()
+            
+                  
+        with dpg.child_window(horizontal_scrollbar=True):
+            dpg.add_text('Imported Files:')
+            with dpg.table(header_row=True, policy=dpg.mvTable_SizingFixedFit, row_background=True, resizable=True, no_host_extendX=False, hideable=True, borders_innerV=True, delay_search=True, borders_outerV=True, borders_innerH=True,
+                borders_outerH=True, tag='lptCreateImgfileTable'):
+                dpg.add_table_column(label='Cam Name', width_fixed=True)
+                dpg.add_table_column(label='Folder Name', width_stretch=True)
+                
+            dpg.add_separator()
+            dpg.add_text('Export Image File Status: --', tag='lptImgFileExportStatus')
+                
+    
+    
+def showActualImgProcess(callbacks):
     subwindow_width = dpg.get_item_width('imgProcess')
     subwindow_height = dpg.get_item_height('imgProcess')
     
@@ -60,11 +107,14 @@ def showImgProcess(callbacks):
             dpg.add_separator()
             
             dpg.add_text('3. Run Batch')
-            dpg.add_file_dialog(directory_selector=True, min_size=[400,300], show=False, tag='lptImgOutputDialog', id="lptImgOutputDialog", callback=callbacks.lptImgProcess.selectFolder, cancel_callback=callbacks.lptImgProcess.cancelSelectFolder)
+            dpg.add_file_dialog(directory_selector=True, width=0.7*subwindow_width, height=0.9*subwindow_height, min_size=[400,300], show=False, tag='lptImgOutputDialog', id="lptImgOutputDialog", callback=callbacks.lptImgProcess.selectFolder, cancel_callback=callbacks.lptImgProcess.cancelSelectFolder)
             dpg.add_button(label='Select Output Folder', callback=lambda: dpg.show_item("lptImgOutputDialog"))
             dpg.add_text('Output Folder: --', tag='lptImgOutputFolder')
+            dpg.add_text('Input frame range to process: (start from 0)')
+            dpg.add_input_int(tag='lptImgFrameRangeStart', default_value=0, min_value=0, width=-1, step=-1, label='Start')
+            dpg.add_input_int(tag='lptImgFrameRangeEnd', default_value=1000, min_value=0, width=-1, step=-1, label='End')
             dpg.add_text('Input number of parallel threads:')
-            dpg.add_input_int(tag='lptImgThreadNum', default_value=10, min_value=1, width=-1)
+            dpg.add_input_int(tag='lptImgThreadNum', default_value=10, min_value=1, width=-1, step=-1)
             dpg.add_button(label='Run Batch', callback=callbacks.lptImgProcess.runBatch)       
             dpg.add_text('Status: --', tag='lptImgExportStatus')
             
