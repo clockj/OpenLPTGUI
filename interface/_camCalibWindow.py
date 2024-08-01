@@ -32,11 +32,13 @@ def showOpenCVCalib(callbacks):
             dpg.add_text('Select a distortion model')
             dpg.add_listbox(tag='distortionModel', items=['Zero', 'Radial: 2nd', 'Full'], default_value='Zero')
             
+            dpg.add_text('Select the axis pointing towards the camera:')
+            dpg.add_listbox(tag='calibrate_OpencvAxis', items=['X', 'Y', 'Z'], default_value='Z')
+            
             dpg.add_button(tag='calibrate_OpencvCalibCam', label='Run Calibration', callback=callbacks.opencvCalib.calibrateCamera)
-            
-            dpg.add_separator()
-            
-            with dpg.group(tag='OpenCV Calibrate Pose Parameters',show=False):
+                    
+            with dpg.group(tag='OpenCV Calibrate Pose Parameters', show=False):
+                dpg.add_separator()
                 dpg.add_text('2. Calibrate Pose Parameters')
                 
                 with dpg.file_dialog(directory_selector=False, min_size=[400,300], show=False, file_count=20, tag='file_dialog_opencvPoseCalib', callback=callbacks.opencvCalib.openPoseCalibFile, cancel_callback=callbacks.opencvCalib.cancelPoseCalibImportFile):
@@ -48,11 +50,12 @@ def showOpenCVCalib(callbacks):
                 dpg.add_text('Select an optimization method')
                 dpg.add_listbox(tag='opencvPoseOptMethod', items=['SOLVEPNP_ITERATIVE', 'SOLVEPNP_EPNP', 'SOLVEPNP_IPPE','SOLVEPNP_SQPNP'])
                 dpg.add_button(tag='calibrate_OpencvCalibPose', label='Run Calibration', callback=callbacks.opencvCalib.calibratePose)
+                dpg.add_separator()
             
-            dpg.add_separator()
-            dpg.add_text('3. Export Camera Parameters')
-            dpg.add_button(tag="buttonExportOpencvCalib",label='Export', callback=lambda: dpg.show_item("exportOpencvCalib"), show=False)
-                    
+            with dpg.group(tag='OpenCV Export Camera Parameters', show=False):
+                dpg.add_text('3. Export Camera Parameters')
+                dpg.add_button(tag="buttonExportOpencvCalib",label='Export', callback=lambda: dpg.show_item("exportOpencvCalib"))
+                dpg.add_separator() 
                         
             with dpg.window(label="Save Files", modal=False, show=False, tag="exportOpencvCalib", no_title_bar=False, width=0.5*subwindow_width, height=0.5*subwindow_height, min_size=[600,255]):
                 dpg.add_text("Name your file")
@@ -73,7 +76,12 @@ def showOpenCVCalib(callbacks):
             with dpg.window(label="ERROR! Select a data file!", modal=True, show=False, tag="noOpencvPath", no_title_bar=False):
                 dpg.add_text("ERROR: This is not a valid path.")
                 dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("noOpencvPath", show=False))
-            dpg.add_separator()
+            
+            with dpg.window(label="Error message of calibration", modal=True, show=False, tag="errorOpencvCalib", no_title_bar=False):
+                dpg.add_text('', tag='errorOpencvCalibText')
+                dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("errorOpencvCalib", show=False))
+            
+            
         
         
         with dpg.child_window(tag='opencvOutputParent'):

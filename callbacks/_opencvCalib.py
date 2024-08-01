@@ -19,6 +19,7 @@ class OpencvCalib:
         self.imgSize = None
         
         # Input: pose calibration parameters
+        self.corMat = None
         self.posecalibFilePath = []
         self.posecalibFileName = []
         self.posecalibData = None # list of pandas dataframes
@@ -51,6 +52,23 @@ class OpencvCalib:
         height = dpg.get_value('inputOpencvCamHeight')
         self.imgSize = (width, height)
 
+        # Get the axis pointing towards the camera
+        axis = dpg.get_value('calibrate_OpencvAxis')
+        if axis == 'X':
+            self.corMat = np.array([[0,0,-1],[0,1,0],[1,0,0]]).astype(np.float32)
+        elif axis == 'Y':
+            self.corMat = np.array([[1,0,0],[0,0,-1],[0,1,0]]).astype(np.float32)
+        elif axis == 'Z':
+            self.corMat = np.identity(3).astype(np.float32)
+        # print('corMat:', self.corMat)
+        
+        # Rotate the points 
+        camcalibPt3D_cor = []
+        for i in range(len(self.camcalibPt3D)):
+            pt3d_temp = (self.camcalibPt3D[i].reshape(-1,3) @ self.corMat.T).reshape(-1,1,3).astype(np.float32)
+            pt3d_temp[:,0,2] = 0
+            camcalibPt3D_cor.append(pt3d_temp)
+    
         # Perform camera calibration
         flags = 0
         aspect_ratio = dpg.get_value('fixAspectRatio')
@@ -68,10 +86,16 @@ class OpencvCalib:
             flags += cv2.CALIB_FIX_K2 + cv2.CALIB_FIX_K3 + cv2.CALIB_ZERO_TANGENT_DIST
         elif dist_model == 'Full':
             flags += 0
+        
+        try:
+            self.camcalibErr, self.camMat, self.distCoeff, _, _ = cv2.calibrateCamera(
+                camcalibPt3D_cor, self.camcalibPt2D, self.imgSize, None, None, flags=flags
+            )
+        except Exception as e:
+            dpg.set_value('errorOpencvCalibText', 'Camera calibration failed: probably due to selecting a wrong axis.\n' + str(e))
+            dpg.configure_item('errorOpencvCalib', show=True)
+
             
-        self.camcalibErr, self.camMat, self.distCoeff, _, _ = cv2.calibrateCamera(
-            self.camcalibPt3D, self.camcalibPt2D, self.imgSize, None, None, flags=flags
-        )
         
         # Print outputs onto the output window 
         dpg.configure_item('opencvCalibGroup', show=True)
@@ -87,6 +111,9 @@ class OpencvCalib:
             dpg.add_text('No file imported', parent='noOpencvPath')
             return
         
+        # Get the axis pointing towards the camera
+        posecalibPt3D_cor = (self.posecalibPt3D.reshape(-1,3) @ self.corMat.T).reshape(-1,1,3).astype(np.float32)
+        
         # Get optimization method
         optMethod = dpg.get_value('opencvPoseOptMethod')
         optFlag = cv2.SOLVEPNP_ITERATIVE
@@ -99,8 +126,12 @@ class OpencvCalib:
         
         # Perform pose calibration
         _, self.rotVec, self.transVec = cv2.solvePnP(
-            self.posecalibPt3D, self.posecalibPt2D, self.camMat, self.distCoeff, flags=optFlag)
+            posecalibPt3D_cor, self.posecalibPt2D, self.camMat, self.distCoeff, flags=optFlag)
         self.rotMat = cv2.Rodrigues(self.rotVec)[0]
+        
+        # Correct the rotation matrix
+        self.rotMat = self.rotMat @ self.corMat
+        self.rotVec = cv2.Rodrigues(self.rotMat)[0]
         
         pt2D, _ = cv2.projectPoints(
             self.posecalibPt3D, self.rotVec, self.transVec, self.camMat, self.distCoeff)
@@ -121,7 +152,7 @@ class OpencvCalib:
         dpg.set_value('opencvRotVec', f'{self.rotVec}')
         dpg.set_value('opencvTransVec', f'{self.transVec}')
         
-        dpg.configure_item('buttonExportOpencvCalib', show=True)
+        dpg.configure_item('OpenCV Export Camera Parameters', show=True)
        
     def openCamcalibFile(self, sender = None, app_data = None): 
         self.camcalibFilePath = []
@@ -154,7 +185,7 @@ class OpencvCalib:
             self.camcalibPt2D.append(np.reshape(pt2d, (pt2d.shape[0],1,2)))
             
             pt3d = np.array(df.loc[:,['WorldX','WorldY','WorldZ']], np.float32)
-            pt3d[:,2] = 0 # OpenCV require: z=0 for camera calibtraion
+            # pt3d[:,2] = 0 # OpenCV require: z=0 for camera calibtraion
             self.camcalibPt3D.append(np.reshape(pt3d, (pt3d.shape[0],1,3)))
         
         # Print outputs onto the output window 

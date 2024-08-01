@@ -126,8 +126,8 @@ class PolyCalib:
         # plot points
         img = np.zeros((self.imgSize[1], self.imgSize[0], 3), np.uint8)
         for i in range(self.calibPt2D.shape[0]):
-            self.draw_plus(img, (int(round(self.calibPt2D[i,0])), int(round(self.calibPt2D[i,1]))), (0,0,255))
-            cv2.circle(img, (int(imgX[i]), int(imgY[i])), 1, (255,0,0), -1)
+            self.draw_plus(img, (int(round(self.calibPt2D[i,0])), int(round(self.calibPt2D[i,1]))), (255,0,0))
+            cv2.circle(img, (int(imgX[i]), int(imgY[i])), 1, (0,0,255))
         Texture.createTexture('polyPlot', img)
     
     def selectFolder(self, sender = None, app_data = None):
