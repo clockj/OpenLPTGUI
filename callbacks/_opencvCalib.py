@@ -134,7 +134,7 @@ class OpencvCalib:
         self.rotVec = cv2.Rodrigues(self.rotMat)[0]
         
         pt2D, _ = cv2.projectPoints(
-            self.posecalibPt3D, self.rotVec, self.transVec, self.camMat, self.distCoeff)
+            self.posecalibPt3D.reshape(-1,1,3), self.rotVec, self.transVec, self.camMat, self.distCoeff)
         self.posecalibErr = cv2.norm(pt2D, self.posecalibPt2D, cv2.NORM_L2)/self.posecalibPt2D.shape[0]
         print('max err:', np.max(np.linalg.norm(pt2D - self.posecalibPt2D, axis=2)))
         print('std err:', np.std(np.linalg.norm(pt2D - self.posecalibPt2D, axis=2)))
@@ -185,7 +185,6 @@ class OpencvCalib:
             self.camcalibPt2D.append(np.reshape(pt2d, (pt2d.shape[0],1,2)))
             
             pt3d = np.array(df.loc[:,['WorldX','WorldY','WorldZ']], np.float32)
-            # pt3d[:,2] = 0 # OpenCV require: z=0 for camera calibtraion
             self.camcalibPt3D.append(np.reshape(pt3d, (pt3d.shape[0],1,3)))
         
         # Print outputs onto the output window 
@@ -233,7 +232,6 @@ class OpencvCalib:
         self.posecalibPt2D = np.reshape(pt2d, (pt2d.shape[0],1,2))
         
         pt3d = np.array(df.loc[:,['WorldX','WorldY','WorldZ']], np.float32)
-        pt3d[:,2] = 0 # OpenCV require: z=0 for camera calibtraion
         self.posecalibPt3D = np.reshape(pt3d, (pt3d.shape[0],1,3))
         
         # Print outputs onto the output window 

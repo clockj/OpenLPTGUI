@@ -41,7 +41,7 @@ def showOpenCVCalib(callbacks):
                 dpg.add_separator()
                 dpg.add_text('2. Calibrate Pose Parameters')
                 
-                with dpg.file_dialog(directory_selector=False, min_size=[400,300], show=False, file_count=20, tag='file_dialog_opencvPoseCalib', callback=callbacks.opencvCalib.openPoseCalibFile, cancel_callback=callbacks.opencvCalib.cancelPoseCalibImportFile):
+                with dpg.file_dialog(directory_selector=False, width=0.7*subwindow_width, height=0.9*subwindow_height, min_size=[400,300], show=False, file_count=20, tag='file_dialog_opencvPoseCalib', callback=callbacks.opencvCalib.openPoseCalibFile, cancel_callback=callbacks.opencvCalib.cancelPoseCalibImportFile):
                     dpg.add_file_extension("", color=(150, 255, 150, 255))
                     dpg.add_file_extension(".csv", color=(0, 255, 255, 255))
                     dpg.add_file_extension(".txt", color=(0, 255, 255, 255))
