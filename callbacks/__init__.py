@@ -1,8 +1,9 @@
 from ._contourExtraction import ContourExtraction
 from ._opencvCalib import OpencvCalib
 from ._polyCalib import PolyCalib
-from ._vsc import Vsc
 from ._lptImgProcess import LptCreateImgFile, LptImgProcess
+from ._lptRun import LptRun
+from ._vsc import Vsc
 
 class Callbacks:
     def __init__(self) -> None:
@@ -10,7 +11,11 @@ class Callbacks:
         self.imageProcessing = self.contourExtraction.imageProcessing
         self.opencvCalib = OpencvCalib()
         self.polyCalib = PolyCalib()
-        self.vsc = Vsc()
+        
         self.lptCreateImgFile = LptCreateImgFile()
         self.lptImgProcess = LptImgProcess()
+        
+        self.lptRun = LptRun()
+        
+        self.vsc = Vsc()
         

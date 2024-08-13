@@ -2,6 +2,7 @@ import dearpygui.dearpygui as dpg
 import numpy as np
 import cv2
 import os
+import re
 from ._texture import Texture
 import enum
 from multiprocessing import Pool
@@ -85,7 +86,7 @@ class LptImgProcess:
 
     def enableAllTags(self):
         for checkbox in self.checkboxes:
-            dpg.configure_item(checkbox, enabled=True)
+            dpg.configure_item(checkbox, enabled=True, )
 
     def disableAllTags(self):
         for checkbox in self.checkboxes:
@@ -122,6 +123,7 @@ class LptImgProcess:
         # configurate listbox for selecting sample image 
         dpg.configure_item('lptImgShowID', items=self.camName)
         dpg.configure_item('lptImgFrameID', max_value=max(self.nFrame)-1)
+        dpg.configure_item('lptImgFrameRangeEnd', max_value=max(self.nFrame)-1)
         self.importImg()
         
         # enable all tags
@@ -327,8 +329,8 @@ class LptImgProcess:
         c = c - b
 
         # Gaussian smoothing filter
-        kernelSize = 2 * int(np.ceil(2 * sigma)) + 1
-        d = cv2.GaussianBlur(c, (kernelSize,kernelSize), sigma)
+        blur_kernelSize = 2 * int(np.ceil(2 * sigma)) + 1
+        d = cv2.GaussianBlur(c, (blur_kernelSize,blur_kernelSize), sigma)
 
         # image normalization
         # kernelSize = 101
@@ -478,7 +480,7 @@ class LptCreateImgFile:
 
         # Filter out only directories
         self.imgFolderList = [item for item in all_items if os.path.isdir(os.path.join(self.mainFolder, item))]
-
+        
         # Print the list of folders and its corresponding name 
         for tag in dpg.get_item_children('lptCreateImgfileTable')[1]:
             dpg.delete_item(tag)
@@ -494,19 +496,43 @@ class LptCreateImgFile:
     
     def selectOutputFolder(self, sender=None, app_data=None):
         self.outputFolder = app_data['file_path_name']
+        dpg.set_value('lptImgFileOutputFolder', 'Output Folder: ' + self.outputFolder)
     
     def createImgFiles(self, sender=None, app_data=None):
         # get parameters
-        nameFormat = dpg.get_value('lptImgNameFormat')
+        nameSuffix = dpg.get_value('lptImgNameSuffix')
         frameStart = dpg.get_value('lptImgFileFrameStart')
         frameEnd = dpg.get_value('lptImgFileFrameEnd')
         
         # create image files
         for i in range(len(self.imgFolderList)):
+            imgFolder = os.path.join(self.mainFolder, self.imgFolderList[i])
+            
+            # find all img files in the folder
+            imgFiles = self.findImgFiles(imgFolder, nameSuffix)
+            frameEnd_use = min(frameEnd, len(imgFiles)-1)
+            
             with open(os.path.join(self.outputFolder, 'cam{:d}ImageNames.txt'.format(i+1)), 'w') as f:
-                for j in range(frameStart, frameEnd+1):
-                    imgName = nameFormat.format(j)
-                    imgPath = os.path.join(self.mainFolder, self.imgFolderList[i], imgName)
-                    f.write(imgPath + '\n')
+                for j in range(frameStart, frameEnd_use+1):
+                    f.write(imgFiles[j] + '\n')
         
-        dpg.set_value('lptImgFileExportStatus', 'Export Image File Status: Finish!')
+        dpg.set_value('lptImgFileExportStatus', 'Export Image File Status: Finish (ID: {:d}~{:d})!'.format(frameStart, frameEnd_use))
+        
+    def getFileNumber(self, filename):
+        # Extract numbers from the filename using a regular expression
+        match = re.search(r'\d+', filename)
+        return int(match.group()) if match else float('inf')
+
+    def findImgFiles(self, folder_path, suffix):
+        files = []
+        
+        # Collect all files with the given suffix
+        for file in os.listdir(folder_path):
+            if file.endswith(suffix):
+                files.append(file)
+        
+        # Sort the files based on the extracted numeric value
+        sorted_files = sorted(files, key=self.getFileNumber)
+        
+        # Return the sorted file paths
+        return [os.path.join(folder_path, file) for file in sorted_files]

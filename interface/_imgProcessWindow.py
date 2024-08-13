@@ -21,17 +21,17 @@ def showCreateImgFile(callbacks):
             dpg.add_button(label='Select', callback=lambda: dpg.show_item("file_dialog_createImgfile"))
             dpg.add_separator()
             
-            dpg.add_text('2. Input Image Name Format:')
-            dpg.add_input_text(tag='lptImgNameFormat', default_value='img{:05d}.tif', width=-1)
+            dpg.add_text('2. Input Image Name Suffix')
+            dpg.add_input_text(tag='lptImgNameSuffix', default_value='.tif', width=-1)
             dpg.add_separator()
             
-            dpg.add_text('3. Create Image Files')
+            dpg.add_text('3. Save Image File Path')
             dpg.add_text('Input Frame Range')
             dpg.add_input_int(tag='lptImgFileFrameStart', default_value=0, min_value=0, width=-1, step=-1, label='Start')
             dpg.add_input_int(tag='lptImgFileFrameEnd', default_value=1000, min_value=0, width=-1, step=-1, label='End')
             dpg.add_file_dialog(directory_selector=True, width=0.7*subwindow_width, height=0.9*subwindow_height, min_size=[400,300], show=False, tag='lptImgFileOutputDialog', callback=callbacks.lptCreateImgFile.selectOutputFolder, cancel_callback=lambda: dpg.configure_item('lptImgFileOutputDialog', show=False))
             dpg.add_button(label='Select Output Folder', callback=lambda: dpg.show_item("lptImgFileOutputDialog"))
-            dpg.add_button(label='Create Files', callback=callbacks.lptCreateImgFile.createImgFiles)
+            dpg.add_button(label='Save', callback=callbacks.lptCreateImgFile.createImgFiles)
             dpg.add_separator()
             
                   
@@ -43,6 +43,7 @@ def showCreateImgFile(callbacks):
                 dpg.add_table_column(label='Folder Name', width_stretch=True)
                 
             dpg.add_separator()
+            dpg.add_text('Output Folder: --', tag='lptImgFileOutputFolder')
             dpg.add_text('Export Image File Status: --', tag='lptImgFileExportStatus')
                 
     
@@ -53,7 +54,7 @@ def showActualImgProcess(callbacks):
     
     with dpg.group(horizontal=True):
         with dpg.child_window(width=0.3*subwindow_width, horizontal_scrollbar=True):
-            with dpg.file_dialog(directory_selector=False, width=0.7*subwindow_width, height=0.9*subwindow_height, min_size=[400,300], file_count=20, show=False, tag='file_dialog_imgprocess', callback=callbacks.lptImgProcess.openImgFile, cancel_callback=callbacks.lptImgProcess.cancelImgImportFile):
+            with dpg.file_dialog(directory_selector=False, width=0.7*subwindow_width, height=0.9*subwindow_height, min_size=[400,300], file_count=100, show=False, tag='file_dialog_imgprocess', callback=callbacks.lptImgProcess.openImgFile, cancel_callback=callbacks.lptImgProcess.cancelImgImportFile):
                 dpg.add_file_extension("", color=(150, 255, 150, 255))
                 dpg.add_file_extension(".txt", color=(0, 255, 255, 255))
 
@@ -102,8 +103,8 @@ def showActualImgProcess(callbacks):
                 dpg.add_text('Labvision Process')
             dpg.add_text('Gaussian Smooth Std')
             dpg.add_slider_float(tag='lptGaussianBlurSlider', default_value=0.5, min_value=0, max_value=5, width=-1, callback=lambda: callbacks.lptImgProcess.executeQuery('labvision'))
-            dpg.add_text('Mean Filter Size (odd)')
-            dpg.add_input_int(tag='lptFilterSizeSlider', default_value=101, min_value=1, max_value=1024, width=-1, callback=lambda: callbacks.lptImgProcess.executeQuery('labvision'))
+            dpg.add_text('Mean Filter Size')
+            dpg.add_slider_int(tag='lptFilterSizeSlider', default_value=100, min_value=1, max_value=1024, width=-1, callback=lambda: callbacks.lptImgProcess.executeQuery('labvision'))
             dpg.add_separator()
             
             dpg.add_text('3. Run Batch')

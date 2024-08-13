@@ -7,16 +7,16 @@ def showVSC(callbacks):
     with dpg.group(horizontal=True):
         with dpg.child_window(width=0.3*subwindow_width,horizontal_scrollbar=True):
             
-            with dpg.file_dialog(directory_selector=False, width=0.7*subwindow_width, height=0.9*subwindow_height, min_size=[400,300], show=False, file_count=20, tag='file_dialog_vscCam', callback=callbacks.vsc.openCamFile, cancel_callback=callbacks.vsc.cancelCamImportFile):
+            with dpg.file_dialog(directory_selector=False, width=0.7*subwindow_width, height=0.9*subwindow_height, min_size=[400,300], show=False, file_count=100, tag='file_dialog_vscCam', callback=callbacks.vsc.openCamFile, cancel_callback=callbacks.vsc.cancelCamImportFile):
                 dpg.add_file_extension("", color=(150, 255, 150, 255))
                 dpg.add_file_extension(".txt", color=(0, 255, 255, 255))
                 
-            with dpg.file_dialog(directory_selector=False, width=0.7*subwindow_width, height=0.9*subwindow_height, min_size=[400,300], show=False, tag='file_dialog_vscTracks', callback=callbacks.vsc.openTracksFile, cancel_callback=callbacks.vsc.cancelTracksImportFile):
+            with dpg.file_dialog(directory_selector=False, width=0.7*subwindow_width, height=0.9*subwindow_height, min_size=[400,300], show=False, file_count=100, tag='file_dialog_vscTracks', callback=callbacks.vsc.openTracksFile, cancel_callback=callbacks.vsc.cancelTracksImportFile):
                 dpg.add_file_extension("", color=(150, 255, 150, 255))
                 dpg.add_file_extension(".csv", color=(0, 255, 255, 255))
                 dpg.add_file_extension(".txt", color=(0, 255, 255, 255))
             
-            with dpg.file_dialog(directory_selector=False, width=0.7*subwindow_width, height=0.9*subwindow_height, file_count=60, min_size=[400,300], show=False, tag='file_dialog_vscImg', callback=callbacks.vsc.openImgFile, cancel_callback=callbacks.vsc.cancelImgImportFile):
+            with dpg.file_dialog(directory_selector=False, width=0.7*subwindow_width, height=0.9*subwindow_height, file_count=100, min_size=[400,300], show=False, tag='file_dialog_vscImg', callback=callbacks.vsc.openImgFile, cancel_callback=callbacks.vsc.cancelImgImportFile):
                 dpg.add_file_extension("", color=(150, 255, 150, 255))
                 dpg.add_file_extension(".txt", color=(0, 255, 255, 255))
                 
@@ -55,14 +55,12 @@ def showVSC(callbacks):
                     dpg.add_table_column(label='Fix', width_fixed=True)
             dpg.add_text('Input max iterations:')
             dpg.add_input_int(tag='inputVscMaxIterations', default_value=20)
-            dpg.add_text('Input number of parallel threads:')
-            dpg.add_input_int(tag='inputVscNumThreads', default_value=10)
+            # dpg.add_text('Input number of parallel threads:')
+            # dpg.add_input_int(tag='inputVscNumThreads', default_value=10)
             dpg.add_text('Input convergence tolerance:')
             dpg.add_input_float(tag='inputVscTolerance', default_value=1e-6, format='%.3e')
             dpg.add_button(label='Run VSC', callback=callbacks.vsc.runVsc)
             dpg.add_text('Status: --', tag='vscStatus')
-            dpg.add_text('Current Iteration: --', tag='vscCurrentIter', show=False)
-            dpg.add_text('Current Cost: --', tag='vscCurrentCost', show=False)
             dpg.add_separator()
                    
             with dpg.group(tag='vscExportParent', show=False):  
@@ -75,7 +73,7 @@ def showVSC(callbacks):
                 dpg.add_separator()
                 dpg.add_text("You MUST enter a File Name to select a directory")
                 dpg.add_button(label='Select the directory', width=-1, callback=lambda: dpg.show_item("folderExportVsc"))
-                dpg.add_file_dialog(directory_selector=True, min_size=[400,300], show=False, tag='folderExportVsc', id="folderExportVsc", callback=callbacks.vsc.selectFolder)
+                dpg.add_file_dialog(directory_selector=True, width=0.7*subwindow_width, height=0.9*subwindow_height, min_size=[400,300], show=False, tag='folderExportVsc', id="folderExportVsc", callback=callbacks.vsc.selectFolder)
                 dpg.add_separator()
                 dpg.add_text('Folder: ', tag='exportVscFolderName')
                 dpg.add_text('Prefix: ', tag='exportVscPrefixName')
@@ -85,8 +83,8 @@ def showVSC(callbacks):
                     dpg.add_button(label='Cancel', width=-1, callback=lambda: dpg.configure_item('exportVsc', show=False))
                 dpg.add_text("Missing file name or directory.", tag="exportVscError", show=False)
             
-            with dpg.window(label="ERROR! Select a data file!", modal=True, show=False, tag="noVscPath", no_title_bar=False):
-                dpg.add_text("ERROR: This is not a valid path.")
+            with dpg.window(label="ERROR! Import correct files!", modal=True, show=False, tag="noVscPath", no_title_bar=False):
+                dpg.add_text("", tag="noVscPathText")
                 dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("noVscPath", show=False))
             
             with dpg.window(label="ERROR! Import more camera files!", modal=True, show=False, tag="noVscCam", no_title_bar=False):
@@ -94,9 +92,24 @@ def showVSC(callbacks):
                 dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("noVscCam", show=False))
         
         with dpg.child_window(tag='vscOutputParent', horizontal_scrollbar=True):
-            
+
             dpg.add_text('VSC Outputs')
             dpg.add_separator()
+            
+            
+            # add plots 
+            dpg.add_text('Plot Buttons')
+            with dpg.group(tag='vscPlotButtonParent', horizontal=True):
+                dpg.add_button(tag='vscPlotButton_importedTracks', label='Imported Tracks', callback=callbacks.vsc.plotImportedTracks, show=False)
+                dpg.add_button(tag='vscPlotButton_loss', label='Loss', callback=callbacks.vsc.plotLoss, show=False)
+                dpg.add_button(tag='vscPlotButton_selectedParticles', label='Selected Particles', callback=callbacks.vsc.plotSelectedParticles, show=False)
+            dpg.add_separator()
+                
+                
+            with dpg.plot(tag="vscPlotParent", label='VSC Plot', height=-1, width=-1):
+                dpg.add_plot_legend()
+                dpg.add_plot_axis(dpg.mvXAxis, label="x", tag="vscPlot_x_axis")
+                dpg.add_plot_axis(dpg.mvYAxis, label="y", tag="vscPlot_y_axis")
             
             with dpg.group(show=False, tag='vscCamOutputParent'):
                 dpg.add_text('Camera File:')
@@ -107,20 +120,7 @@ def showVSC(callbacks):
                     dpg.add_table_column(label='Cam Name', width_fixed=True)
                     dpg.add_table_column(label='File Name', width_fixed=True)
                     dpg.add_table_column(label='File Path', width_fixed=True)
-                
-                with dpg.table(header_row=True, policy=dpg.mvTable_SizingFixedFit, row_background=True,
-                resizable=True, no_host_extendX=False, hideable=True,
-                borders_innerV=True, delay_search=True, borders_outerV=True, borders_innerH=True,
-                borders_outerH=True, tag='vscCamParamTable'):
-                    dpg.add_table_column(label='Cam Name', width_fixed=True)
-                    dpg.add_table_column(label='CamMat', width_fixed=True)
-                    dpg.add_table_column(label='DistCoeff', width_fixed=True)
-                    dpg.add_table_column(label='RotMat', width_fixed=True)
-                    dpg.add_table_column(label='TransVec', width_fixed=True)
-                    dpg.add_table_column(label='CamCalib Error', width_fixed=True) 
-                    dpg.add_table_column(label='PoseCalib Error', width_fixed=True)
-            
-            dpg.add_separator()
+                        
             with dpg.group(show=False, tag='vscImgOutputParent'):
                 dpg.add_text('Image File:')
                 with dpg.table(header_row=True, policy=dpg.mvTable_SizingFixedFit, row_background=True,
@@ -130,8 +130,8 @@ def showVSC(callbacks):
                     dpg.add_table_column(label='Cam Name', width_fixed=True)
                     dpg.add_table_column(label='File Name', width_fixed=True)
                     dpg.add_table_column(label='File Path', width_fixed=True)
-            
-            dpg.add_separator()
+                dpg.add_separator()
+                
             with dpg.group(show=False, tag='vscTracksOutputParent'):
                 dpg.add_text('Tracks File:')
                 with dpg.table(header_row=True, policy=dpg.mvTable_SizingFixedFit, row_background=True,
@@ -149,22 +149,9 @@ def showVSC(callbacks):
                     dpg.add_table_column(label='FrameID', width_fixed=True)
                     dpg.add_table_column(label='WorldX', width_fixed=True)
                     dpg.add_table_column(label='WorldY', width_fixed=True)
-                    dpg.add_table_column(label='WorldZ', width_fixed=True)
-                    
-            dpg.add_separator()
-            with dpg.group(show=False, tag='vscOptParamParent'):
-                dpg.add_text('Optimized Results:')
-                dpg.add_text('Initial Cost: --', tag='vscInitialCost')
-                dpg.add_text('Final Cost: --', tag='vscFinalCost')
-                with dpg.table(header_row=True, policy=dpg.mvTable_SizingFixedFit, row_background=True,
-                resizable=True, no_host_extendX=False, hideable=True,
-                borders_innerV=True, delay_search=True, borders_outerV=True, borders_innerH=True,
-                borders_outerH=True, tag='vscCamParamOptTable'):
-                    dpg.add_table_column(label='Cam Name', width_fixed=True)
-                    dpg.add_table_column(label='RotMat', width_fixed=True)
-                    dpg.add_table_column(label='TransVec', width_fixed=True)
-                    
-            dpg.add_separator()
+                    dpg.add_table_column(label='WorldZ', width_fixed=True)    
+                dpg.add_separator()
+                   
             dpg.add_text('Export path: --', tag='vscExportFolder', show=False)
                 
             

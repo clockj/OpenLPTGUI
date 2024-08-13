@@ -2,6 +2,7 @@ import dearpygui.dearpygui as dpg
 
 def showContourExtraction(callbacks):
     subwindow_width = dpg.get_item_width('calibPlate')
+    subwindow_height = dpg.get_item_height('calibPlate')    
     
     with dpg.group(horizontal=True):
         with dpg.child_window(width=0.3*subwindow_width,horizontal_scrollbar=True):
@@ -85,7 +86,7 @@ def showContourExtraction(callbacks):
                 dpg.add_separator()
                 dpg.add_text("You MUST enter a File Name to select a directory")
                 dpg.add_button(label='Select the directory', width=-1, callback= callbacks.contourExtraction.openCentersDirectorySelector)
-                dpg.add_file_dialog(directory_selector=True, min_size=[400,300], show=False, tag='directoryFolderexportCenters', id="directoryFolderexportCenters", callback=callbacks.contourExtraction.selectCentersFolder)
+                dpg.add_file_dialog(directory_selector=True, width=0.7*subwindow_width, height=0.9*subwindow_height, min_size=[400,300], show=False, tag='directoryFolderexportCenters', id="directoryFolderexportCenters", callback=callbacks.contourExtraction.selectCentersFolder)
                 dpg.add_separator()
                 dpg.add_text('File Default Name: ', tag='centerFileName')
                 dpg.add_text('Complete Path Name: ', tag='centerPathName')
@@ -100,7 +101,7 @@ def showContourExtraction(callbacks):
                 dpg.add_separator()
                 dpg.add_text("You MUST enter a File Name to select a directory")
                 dpg.add_button(label='Select the directory', width=-1, callback= callbacks.contourExtraction.openDirectorySelector)
-                dpg.add_file_dialog(directory_selector=True, min_size=[400,300], show=False, tag='directorySelectorFileDialog', id="directorySelectorFileDialog", callback=callbacks.contourExtraction.selectFolder)
+                dpg.add_file_dialog(directory_selector=True, width=0.7*subwindow_width, height=0.9*subwindow_height, min_size=[400,300], show=False, tag='directorySelectorFileDialog', id="directorySelectorFileDialog", callback=callbacks.contourExtraction.selectFolder)
                 dpg.add_separator()
                 dpg.add_text('Contour ID: ', tag='contourIdExportText')
                 dpg.add_text('File Name: ', tag='exportFileName')
@@ -116,7 +117,7 @@ def showContourExtraction(callbacks):
                 dpg.add_separator()
                 dpg.add_text("You MUST enter a prefix to the File Name to select a directory")
                 dpg.add_button(label='Select the directory', width=-1, callback= callbacks.contourExtraction.openExportSelectedDirectorySelector)
-                dpg.add_file_dialog(directory_selector=True, min_size=[400,300], show=False, tag='directoryFolderExportSelected', id="directoryFolderExportSelected", callback=callbacks.contourExtraction.selectExportAllFolder)
+                dpg.add_file_dialog(directory_selector=True, width=0.7*subwindow_width, height=0.9*subwindow_height, min_size=[400,300], show=False, tag='directoryFolderExportSelected', id="directoryFolderExportSelected", callback=callbacks.contourExtraction.selectExportAllFolder)
                 dpg.add_separator()
                 dpg.add_text('File Default Name: ', tag='exportSelectedFileName')
                 dpg.add_text('Complete Path Name: ', tag='exportSelectedPathName')

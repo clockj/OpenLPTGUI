@@ -2,29 +2,26 @@ import dearpygui.dearpygui as dpg
 import cv2
 import numpy as np
 import pandas as pd
-import os.path
-import itertools 
+import os
+import itertools
 from scipy.optimize import minimize
-from multiprocessing import Pool
+import time
+import pyOpenLPT as lpt
+
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+from ._texture import Texture
 
 class Vsc:
     def __init__(self) -> None:
         self.camFilePath = [] 
         self.camFileName = []
+        self.cam = []
 
-        self.camcalibErrList = []
-        self.posecalibErrList = []
-        self.imgNrowNcolList = [] # (n_row, n_col)
-        self.camMatList = [] 
-        self.distCoeffList = []
-        self.rotVecList = []
-        self.rotMatList = []
-        self.transVecList = []
-        self.rotMatInvList = []
-        self.transVecInvList = [] # - inv(R) @ T
-        
         self.nCam = None
-        self.camFixID = []
+        self.isCamFix = None
         
         self.tracksFilePath = None
         self.tracksFileName = None
@@ -36,12 +33,13 @@ class Vsc:
         self.imgFilePath = []
         
         self.nThreads = None
-        self.nIter = None
+        self.loss = []
+        self.cam_update = []
+        self.pt2d_list_lpt = []
         
         # Outputs 
         self.exportFolderPath = None
         self.exportFilePrefix = None
-        self.optParam = []
     
     def runVsc(self, sender=None, app_data=None):
         if self.nCam < 2:
@@ -53,6 +51,8 @@ class Vsc:
         # select good tracks 
         dpg.set_value('vscStatus', 'Status: Selecting good tracks!')
         self.selectGoodTracks()
+        # only for debug 
+        # self.tracks = pd.read_csv(self.camFilePath[0].replace(self.camFileName[0],'goodTracks.csv'))
         
         # select particles 
         dpg.set_value('vscStatus', 'Status: Selecting particles!')
@@ -62,25 +62,31 @@ class Vsc:
         # get particle info: (WorldX, WorldY, WorldZ, Cam1ImgX, Cam1ImgY, ...)
         dpg.set_value('vscStatus', 'Status: Extracting particle info!')
         self.getParticleInfo(goodParticles)
-        # print(self.particleInfo.shape)
+        # only for debug, generate debug dataset
+        # npts = 4000
+        # np.random.seed(0)
+        # pt3d = np.random.rand(npts,3)*40 - 20
+        # pt3d_lpt = [lpt.math.Pt3D(pt3d[i,0], pt3d[i,1], pt3d[i,2]) for i in range(npts)]
+        # pt2d_list = [cam.project(pt3d_lpt) for cam in self.cam]
+        # self.particleInfo = np.zeros((npts, 3+2*self.nCam))
+        # self.particleInfo[:,0:3] = pt3d
+        # for i in range(self.nCam):
+        #     self.particleInfo[:,3+2*i:3+2*(i+1)] = np.array([[pt2d_list[i][j][0], pt2d_list[i][j][1]] for j in range(npts)])
+        
         
         # optimize pose parameters 
         dpg.set_value('vscStatus', 'Status: Optimizing!')
-        dpg.show_item('vscCurrentIter')
-        dpg.show_item('vscCurrentCost')
         self.optCalib()
-        
         dpg.set_value('vscStatus', 'Status: Finish!')
         
-        
     def selectGoodTracks(self):
-        
         trackIDList = self.tracks['TrackID'].unique()
         
         for trackID in trackIDList:
             track = self.tracks.loc[self.tracks['TrackID'] == trackID]  
             length = track.shape[0]
             if length < 20:
+                self.tracks.drop(track.index, inplace=True)
                 continue
             
             errVec = np.zeros(3)
@@ -137,12 +143,19 @@ class Vsc:
                         isSelect[index] = 1
 
         # for the number of selected particle is less than the required number, then select them again from the orginal data randomly
-        nLess = int(nParticles - np.sum(isSelect))
+        nUniform = np.sum(isSelect)
+        nLess = int(nParticles - nUniform)
         if nLess > 0:
             id = np.array(range(self.tracks.shape[0]))
             notSelectID = id[isSelect==0]
-            newSelectID = np.random.choice(notSelectID, nLess, replace=False)
+            if nLess > len(notSelectID):
+                newSelectID = notSelectID   
+            else:
+                newSelectID = np.random.choice(notSelectID, nLess, replace=False)
             isSelect[newSelectID] = 1
+            
+        print('Number of selected particles:', np.sum(isSelect))
+        print('Number of uniformly distributed particles:', nUniform)
 
         # fill in the goodParticles dataframe
         goodParticles = self.tracks.iloc[isSelect.astype(bool), :]
@@ -154,95 +167,72 @@ class Vsc:
         return np.array(goodParticles, dtype=np.float32)
     
     def getParticleInfo(self, goodParticles):
-        
         nParticles = goodParticles.shape[0]
         
         # project 3D points onto each camera
         # pt3D (WorldX, WorldY, WorldZ) => pt2D (ImgX, ImgY)
-        searchR = dpg.get_value('inputVscParticleRadius') * 0.75
-        pt2DList = np.zeros((nParticles, 2 * self.nCam), dtype=np.float32)
+        pt3d_list = [lpt.math.Pt3D(goodParticles[j, 2], goodParticles[j, 3], goodParticles[j, 4]) for j in range(nParticles)]
+        pt2d_list_all = [self.cam[i].project(pt3d_list) for i in range(self.nCam)]
         
-        pt3D = np.reshape(goodParticles[:, 2:5], (nParticles, 1, 3))
-        for i in range(self.nCam):
-            pt2D, _ = cv2.projectPoints(pt3D, self.rotVecList[i], self.transVecList[i], self.camMatList[i], self.distCoeffList[i])
-            pt2D = np.reshape(pt2D, (nParticles, 2))
-            pt2DList[:, 2*i:2*i+2] = pt2D
+        # load imgio 
+        imgio_list = [lpt.math.ImageIO('', self.imgFilePath[i]) for i in range(self.nCam)]
             
         # find candidates on each camera for each particle
         # check triangulation error
         # particle info: (WorldX, WorldY, WorldZ, Cam1ImgX, Cam1ImgY, ...)
+        searchR = dpg.get_value('inputVscParticleRadius') * 0.75
+        errThreshold = dpg.get_value('inputVscTriangulationThreshold')
+        
+        properties = [2.0**32-1, 35.0, 2.0]
+        is_delete = np.array([False]*nParticles)
         particleInfo = []
         for j in range(nParticles):
-            delete = False
-            imgCandidatesList = []
-            imgCandidatesIDList = []
+            pt2d_candidates_list = []
+            pt2d_candidates_IDList = []
+            sight_list = []
             
             for i in range(self.nCam):
                 # load image 
-                file = self.imgFilePath[i]
-                with open(file, 'r') as f:
-                    lines = f.readlines()
-                    frameID = int(goodParticles[j,1])
-                    # imgPath = self.imgFilePath[i].replace(self.imgFileName[i], lines[frameID].strip('\n'))
-                    imgPath = lines[frameID].strip('\n')
-                img = cv2.imread(imgPath, cv2.IMREAD_GRAYSCALE and cv2.IMREAD_ANYDEPTH)
-                height, width = img.shape
+                frameID = int(goodParticles[j,1])
+                img = imgio_list[i].loadImg(frameID)
+                width = self.cam[i].getNCol()
+                height = self.cam[i].getNRow()
                 
                 # define search range
-                pt2D = pt2DList[j, 2*i:2*i+2]
-                imgX = pt2D[0] # col 
-                imgY = pt2D[1] # row
-                rowMin = max(1, int(np.floor(imgY-searchR)))
-                rowMax = min(height, int(np.ceil(imgY+searchR+1)))
-                colMin = max(1, int(np.floor(imgX-searchR)))
-                colMax = min(width, int(np.ceil(imgX+searchR+1)))
-                searchImg = img[
-                    rowMin : rowMax, 
-                    colMin : colMax 
-                ]
+                region = lpt.PixelRange()
+                x = pt2d_list_all[i][j][0]
+                y = pt2d_list_all[i][j][1]
+                region.row_min = max(1, int(np.floor(y-searchR)))
+                region.row_max = min(height, int(np.ceil(y+searchR+1)))
+                region.col_min = max(1, int(np.floor(x-searchR)))
+                region.col_max = min(width, int(np.ceil(x+searchR+1)))
 
                 # find candidates on img 
-                imgCandidates = self.getImgCandidates(searchImg)
-                if imgCandidates.shape[0] == 0:
-                    delete = True
+                obj2d_list = lpt.object.ObjectFinder2D().findTracer2D(img, properties, region)
+                n_obj2d = len(obj2d_list)
+                if n_obj2d == 0:
+                    is_delete[j] = True
                     break
                 else:
-                    imgCandidates[:,0] += colMin # col
-                    imgCandidates[:,1] += rowMin # row
-                    imgCandidatesList.append(imgCandidates)
-                    imgCandidatesIDList.append(list(range(imgCandidates.shape[0])))
+                    pt2d_candidates = [lpt.math.Pt2D(obj2d._pt_center) for obj2d in obj2d_list]
+                    sight_list.append(self.cam[i].lineOfSight(pt2d_candidates))
+                    pt2d_candidates_list.append(pt2d_candidates)
+                    pt2d_candidates_IDList.append(list(range(n_obj2d)))
               
-            if delete:
+            if is_delete[j]:
                 continue
             
             # Calculate triangulation error
-            pairIDList = list(itertools.product(*imgCandidatesIDList))
-            nPairs = len(pairIDList)
-            errList = np.zeros(nPairs)
-            tri3DList = np.zeros((nPairs, 3))
-            errMin = np.inf
-            errMinID = None
-            errThreshold = dpg.get_value('inputVscTriangulationThreshold')
-            bestImgCandidatesPair = []
+            pairID_list = list(itertools.product(*pt2d_candidates_IDList))
+            sight_list_all = [[sight_list[cam_id][pairID[cam_id]] for cam_id in range(self.nCam)] for pairID in pairID_list]
             
-            for idx, pairID in enumerate(pairIDList):
-                imgCandidatesPair = []
-                for camID in range(self.nCam):
-                    imgCandidatesPair.append(imgCandidatesList[camID][pairID[camID],:])
-                    
-                tri3D, err = self.triangulation(imgCandidatesPair, param=[self.camMatList, self.distCoeffList, self.rotVecList, self.transVecList])
-                tri3DList[idx, :] = tri3D
-                errList[idx] = err
-                
-                if err < errMin:
-                    errMin = err
-                    errMinID = idx
-                    bestImgCandidatesPair = imgCandidatesPair
+            tri3d_list, err_list = lpt.math.triangulation(sight_list_all)
             
-            # print(errMin, flush=True)
+            minid = np.argmin(err_list)
+            errMin = err_list[minid]
             if errMin < errThreshold:
-                info = [tri3DList[errMinID, :]]
-                info += bestImgCandidatesPair[:]
+                info = [tri3d_list[minid][0], tri3d_list[minid][1], tri3d_list[minid][2]]
+                info += [pt2d_candidates_list[cam_id][pairID_list[minid][cam_id]][axis_id] for cam_id in range(self.nCam) for axis_id in range(2)]
                 particleInfo.append(np.hstack(info))
                 
         self.particleInfo = np.array(particleInfo)
@@ -254,282 +244,121 @@ class Vsc:
         
         print('Finish extracting particle info!')
 
-    def getImgCandidates(self, searchImg):
-        nRow, nCol = searchImg.shape
-        threshold = 35
-        pt2DList = []
-        for i in range(1, nRow-1): 
-            for j in range(1, nCol-1):
-                if searchImg[i, j] >= threshold and self.isLocalMax(searchImg, i, j):
-                    x1,x2,x3,y1,y2,y3 = [j-1,j,j+1,i-1,i,i+1]
-                    ln1 = self.nonInfLog(searchImg[i, j-1])
-                    ln2 = self.nonInfLog(searchImg[i, j])
-                    ln3 = self.nonInfLog(searchImg[i, j+1])
-                
-                    xc = -0.5 * (ln1*(x2*x2-x3*x3) - ln2*(x1*x1-x3*x3) + ln3*(x1*x1-x2*x2)) / (ln1*(x3-x2) - ln3*(x1-x2) + ln2*(x1-x3))
-                    
-                    ln1 = self.nonInfLog(searchImg[i-1, j])
-                    ln2 = self.nonInfLog(searchImg[i, j])
-                    ln3 = self.nonInfLog(searchImg[i+1, j])
-                    yc = -0.5 * (ln1*(y2*y2-y3*y3) - ln2*(y1*y1-y3*y3) + ln3*(y1*y1-y2*y2)) / (ln1*(y3-y2) - ln3*(y1-y2) + ln2*(y1-y3))
-                    
-                    if not np.isinf(xc) and not np.isinf(yc):
-                        pt2DList.append([xc, yc])
-        return np.array(pt2DList)
-
-    def isLocalMax(self, img, i, j):
-        if img[i,j] > img[i-1,j] and img[i,j] > img[i,j-1] and img[i,j] > img[i,j+1] and img[i,j] > img[i+1,j]:
-            return True
-        else:
-            return False
-    
-    def nonInfLog(self, x):
-        if x == 0:
-            x = 1e-4
-        return np.log(x)
-    
-    def triangulation(self, imgCandidatesPair, param): 
-        A = np.zeros((3, 3), dtype=np.float32)
-        B = np.zeros((3, 1), dtype=np.float32)
-        
-        camMatList, distCoeffList, rotVecList, transVecList = param
-        
-        # get line of sight for each camera
-        lineList = []
-        for i in range(self.nCam):
-            # undistort
-            imgCandidate = np.reshape(imgCandidatesPair[i], (1,1,2))
-            # pt = cv2.undistortPoints(imgCandidate, self.camMatList[i], self.distCoeffList[i])
-            pt = cv2.undistortPointsIter(imgCandidate, camMatList[i], distCoeffList[i], R=np.eye(3), P=camMatList[i], criteria=(cv2.TERM_CRITERIA_COUNT | cv2.TERM_CRITERIA_EPS, 100, 1e-5))
-            
-            ptUndistort = np.ones((3,1))
-            ptUndistort[0] = pt[0,0,0]
-            ptUndistort[1] = pt[0,0,1]
-            # ptUndistort[0] = imgCandidatesPair[i][0]
-            # ptUndistort[1] = imgCandidatesPair[i][1]
-            
-            # get rotation matrix   
-            rotMat = cv2.Rodrigues(rotVecList[i])[0]
-            rotMatInv = np.linalg.inv(rotMat)
-            transVecInv = -rotMatInv @ transVecList[i]
-            
-            pt3D = rotMatInv @ np.linalg.inv(camMatList[i]) @ ptUndistort + transVecInv
-            unitVec = pt3D - transVecInv
-            unitVec = unitVec/np.linalg.norm(unitVec)
-
-            lineList.append([transVecInv, unitVec])
-            
-            C = np.eye(3) - unitVec @ unitVec.T
-            A += C
-            B += C @ transVecInv
-            
-        # get intersection point
-        tri3D = np.linalg.inv(A) @ B
-
-        # get triangulation error
-        err = 0
-        for i in range(self.nCam):
-            diff = tri3D - lineList[i][0]
-            err += np.sqrt(np.abs(diff.T @ diff - (diff.T @ lineList[i][1])**2))
-        err /= self.nCam
-        
-        return np.reshape(tri3D, (1,3)), err[0,0]
-    
     def optCalib(self):
-        
         # get fix cam id
-        self.camFixID = [] 
+        self.isCamFix = np.zeros(self.nCam).astype(bool)
         for i in range(self.nCam):
             if dpg.get_value('vscCamFixTable'+str(i)) == True:
-                self.camFixID.append(i)
+                self.isCamFix[i] = True
         
-        # optimize pose parameters        
-        x = np.zeros(6*(self.nCam-len(self.camFixID)), dtype=np.float32)
-        idx = 0
+        # convert to Pt2D list
+        self.pt2d_list_lpt = [[lpt.math.Pt2D(self.particleInfo[j, 3+2*i], self.particleInfo[j, 3+2*i+1]) for j in range(self.particleInfo.shape[0])] for i in range(self.nCam)]
+        
+        # optimize parameters        
+        x = []
+        id = 0
         for i in range(self.nCam):
-            if i in self.camFixID:
+            if self.isCamFix[i]:
                 continue
-            else:
-                x[6*idx:6*idx+3] = self.rotVecList[i][:,0]
-                x[6*idx+3:6*idx+6] = self.transVecList[i][:,0]
-                idx += 1
+            if self.cam[i]._type == lpt.math.CameraType.PINHOLE:
+                x += list(lpt.math.matrix_to_numpy(self.cam[i].rmtxTorvec(self.cam[i]._pinhole_param.r_mtx)).reshape(-1,))
+                # x += list(cv2.Rodrigues(lpt.math.matrix_to_numpy(cam[i]._pinhole_param.r_mtx))[0].reshape(-1,))
+                x += list(lpt.math.matrix_to_numpy(self.cam[i]._pinhole_param.t_vec).reshape(-1,))
+                id += 6
+            elif self.cam[i]._type == lpt.math.CameraType.POLYNOMIAL:
+                x += list(lpt.math.matrix_to_numpy(self.cam[i]._poly_param.u_coeffs)[:,0])
+                x += list(lpt.math.matrix_to_numpy(self.cam[i]._poly_param.v_coeffs)[:,0])
+                id += self.cam[i]._poly_param.n_coeff * 2
+        x = np.array(x) 
+        self.cam_update = [lpt.math.Camera(self.cam[i]) for i in range(self.nCam)]
+        
+        cost = self.costfunc(x)
+        print('Initial cost: ', cost)
                 
         maxIter = dpg.get_value('inputVscMaxIterations') 
-        self.nThreads = dpg.get_value('inputVscNumThreads')  
+        # self.nThreads = dpg.get_value('inputVscNumThreads')  
         tolerance = dpg.get_value('inputVscTolerance')
-        # res = minimize(self.costfunc, x, method='BFGS', tol=tolerance, options={'disp':True, 'maxiter':maxIter})
-        self.nIter = 1
-        res = minimize(self.costfunc, x, method='BFGS', options={'disp':True, 'maxiter':maxIter, 'xrtol': tolerance}, callback=self.optCallback)
+        self.loss = [cost]
         
-        # get optimized pose parameters
-        rotVecList = []
-        transVecList = []
-        idx = 0
-        for i in range(self.nCam):
-            if i in self.camFixID:
-                rotVecList.append(self.rotVecList[i])
-                transVecList.append(self.transVecList[i])
-            else:
-                rotVec = np.zeros((3,1))
-                rotVec[:,0] = res.x[6*idx:6*idx+3]
-                rotVecList.append(rotVec)
-                transVec = np.zeros((3,1))
-                transVec[:,0] = res.x[6*idx+3:6*idx+6]
-                transVecList.append(transVec)
-                idx += 1
+        t_start = time.time()
+        res = minimize(self.costfunc, x, method='L-BFGS-B', tol=tolerance, options={'maxiter':maxIter}, callback=self.optCallback)
+        t_end = time.time()
+        print('Time: ', t_end-t_start)
         
-        self.optParam = [rotVecList, transVecList]
-        
-        # print optimized results
-        initCost = self.costfunc(x)
-        finalCost = self.costfunc(res.x) 
-        dpg.set_value('vscInitialCost', 'Initial Cost: ' + str(initCost).format('%.3f'))
-        dpg.set_value('vscFinalCost', 'Final Cost: ' + str(finalCost).format('%.3f'))
-                
-        for tag in dpg.get_item_children('vscCamParamOptTable')[1]:
-            dpg.delete_item(tag)
-        
-        for i in range(self.nCam):
-            rotMat = cv2.Rodrigues(rotVecList[i])[0]
-            with dpg.table_row(parent='vscCamParamOptTable'):
-                dpg.add_text('Cam'+str(i+1))
-                dpg.add_text(str(rotMat))
-                dpg.add_text(str(transVecList[i]))
-                        
-        dpg.configure_item('vscOptParamParent', show=True)
+        dpg.configure_item('vscPlotButton_loss', show=True)
+        dpg.configure_item('vscPlotButton_selectedParticles', show=True)            
         dpg.configure_item('vscExportParent', show=True)
         
         print('Finish optimization!')
         
     def costfunc(self, x):
+        npts = len(self.pt2d_list_lpt[0])
         
-        # get pose parameters
-        rotVecList = []
-        transVecList = []
-        idx = 0
+        # update cam 
+        id = 0
+        line_list_all = []
         for i in range(self.nCam):
-            if i in self.camFixID:
-                rotVecList.append(self.rotVecList[i])
-                transVecList.append(self.transVecList[i])
-            else:
-                rotVec = np.zeros((3,1))
-                rotVec[:,0] = x[6*idx:6*idx+3]
-                rotVecList.append(rotVec)
-                transVec = np.zeros((3,1))
-                transVec[:,0] = x[6*idx+3:6*idx+6]
-                transVecList.append(transVec)
-                idx += 1
-        
-        triParam = [self.camMatList, self.distCoeffList, rotVecList, transVecList]
-        with Pool(self.nThreads) as pool:
-            res = pool.starmap(self.costfuncTask, zip(self.particleInfo[:, 3:], itertools.repeat(triParam)))
-        # cost = np.mean(res)
-        # cost = np.max(res)
-        cost = np.sum(res)
-        # print(cost)
-        return cost
-    
-    def costfuncTask(self, pair, param):
-        pair = list(np.reshape(pair, (self.nCam, 2)))
-        _, err = self.triangulation(pair, param)
-        return err
+            if self.isCamFix[i]:
+                continue
+            if self.cam_update[i]._type == lpt.math.CameraType.PINHOLE:
+                rotVec = np.array(x[id:id+3])
+                transVec = np.array(x[id+3:id+6]).reshape(3,1)
+                rotMat = cv2.Rodrigues(rotVec)[0]
+                rotMatInv = np.linalg.inv(rotMat)
+                transVecInv = - rotMatInv @ transVec
+                
+                self.cam_update[i]._pinhole_param.r_mtx = lpt.math.numpy_to_matrix(cv2.Rodrigues(rotVec)[0])
+                self.cam_update[i]._pinhole_param.t_vec = lpt.math.Pt3D(transVec[0,0], transVec[1,0], transVec[2,0])
+                self.cam_update[i]._pinhole_param.r_mtx_inv = lpt.math.numpy_to_matrix(rotMatInv)
+                self.cam_update[i]._pinhole_param.t_vec_inv = lpt.math.Pt3D(transVecInv[0,0], transVecInv[1,0], transVecInv[2,0])
+                
+                id += 6
+                
+            elif self.cam_update[i]._type == lpt.math.CameraType.POLYNOMIAL:
+                u_coeffs = lpt.math.matrix_to_numpy(self.cam_update[i]._poly_param.u_coeffs)
+                v_coeffs = lpt.math.matrix_to_numpy(self.cam_update[i]._poly_param.v_coeffs)
+                n_coeff = self.cam_update[i]._poly_param.n_coeff
+                
+                u_coeffs[:,0] = x[id:id+n_coeff]
+                v_coeffs[:,0] = x[id+n_coeff:id+n_coeff*2]
+                
+                self.cam_update[i]._poly_param.u_coeffs = lpt.math.numpy_to_matrix(u_coeffs)
+                self.cam_update[i]._poly_param.v_coeffs = lpt.math.numpy_to_matrix(v_coeffs)
+                self.cam_update[i].updatePolyDuDv()
+                
+                id += n_coeff * 2
+
+            line_list = self.cam_update[i].lineOfSight(self.pt2d_list_lpt[i])
+            line_list_all.append(line_list)
+
+        # triangulation
+        sight_list_all = [[line_list_all[j][i] for j in range(self.nCam)] for i in range(npts)]
+        _, err_list = lpt.math.triangulation(sight_list_all)
+        return np.mean(err_list)
     
     def optCallback(self, xi):
-        if self.nIter%1 == 0:
-            dpg.set_value('vscCurrentIter', 'Current Iteration: ' + str(self.nIter))
-            dpg.set_value('vscCurrentCost', 'Current Cost: ' + str(self.costfunc(xi)).format('%.3f'))
-        self.nIter += 1
+        self.loss.append(self.costfunc(xi))
     
     def openCamFile(self, sender=None, app_data=None):
-        self.camFilePath = [] 
-        self.camFileName = []
-        self.camcalibErrList = []
-        self.posecalibErrList = []
-        self.imgNrowNcolList = []
-        self.camMatList = [] 
-        self.distCoeffList = []
-        self.rotVecList = []
-        self.rotMatList = []
-        self.transVecList = []
-        self.rotMatInvList = []
-        self.transVecInvList = [] # - inv(R) @ T
+        self.cam = [] 
         
         selections = app_data['selections']
         self.nCam = len(selections)
         if self.nCam == 0:
             dpg.configure_item('noVscPath', show=True)
-            dpg.add_text('No file selected', parent='noVscPath')
+            dpg.set_value('noVscPathText', 'No file selected!')
             return
         
         for keys, values in selections.items():
             if os.path.isfile(values) is False:
                 dpg.configure_item('noVscPath', show=True)
-                dpg.add_text('Wrong path:', parent='noVscPath')
-                dpg.add_text(values, parent='noVscPath')
+                dpg.set_value('noVscPathText', 'Wrong path:\n'+values)
                 return
             self.camFilePath.append(values)
             self.camFileName.append(keys)
         
             # Load camera parameters
-            with open(values, 'r') as f:
-                lines = f.readlines()[2:]
-                
-                line_id = 1
-                if 'None' in lines[line_id] or 'none' in lines[line_id]:
-                    self.camcalibErrList.append(None)
-                else:
-                    self.camcalibErrList.append(float(lines[line_id]))
-                line_id += 2
-                if 'None' in lines[line_id] or 'none' in lines[line_id]:
-                    self.posecalibErrList.append(None)
-                else:
-                    self.posecalibErrList.append(float(lines[line_id]))
-                
-                line_id += 2
-                nRownCol = np.array(lines[line_id].split(',')).astype(np.int32)
-                self.imgNrowNcolList.append(nRownCol)
-                
-                line_id += 2
-                camMat = np.zeros((3,3))
-                camMat[0,:] = np.array(lines[line_id].split(',')).astype(np.float32)
-                camMat[1,:] = np.array(lines[line_id+1].split(',')).astype(np.float32)
-                camMat[2,:] = np.array(lines[line_id+2].split(',')).astype(np.float32)
-                self.camMatList.append(camMat)
-                
-                line_id += 4
-                distCoeff = np.array([lines[line_id].split(',')]).astype(np.float32)
-                self.distCoeffList.append(distCoeff)
-                
-                line_id += 2
-                rotVec = np.zeros((3,1))
-                rotVec[:,0] = np.array(lines[line_id].split(',')).astype(np.float32)
-                self.rotVecList.append(rotVec)
-                
-                line_id += 2
-                rotMat = np.zeros((3,3))
-                rotMat[0,:] = np.array(lines[line_id].split(',')).astype(np.float32)
-                rotMat[1,:] = np.array(lines[line_id+1].split(',')).astype(np.float32)
-                rotMat[2,:] = np.array(lines[line_id+2].split(',')).astype(np.float32)
-                self.rotMatList.append(rotMat)
-                
-                # rotMatInv
-                line_id += 4
-                rotMatInv = np.zeros((3,3))
-                rotMatInv[0,:] = np.array(lines[line_id].split(',')).astype(np.float32)
-                rotMatInv[1,:] = np.array(lines[line_id+1].split(',')).astype(np.float32)
-                rotMatInv[2,:] = np.array(lines[line_id+2].split(',')).astype(np.float32)
-                self.rotMatInvList.append(rotMatInv)
-                
-                line_id += 4
-                transVec = np.zeros((3,1))
-                transVec[:,0] = np.array(lines[line_id].split(',')).astype(np.float32)
-                self.transVecList.append(transVec)
-                
-                # transVecInv
-                line_id += 2
-                transVecInv = np.zeros((3,1))
-                transVecInv[:,0] = np.array(lines[line_id].split(',')).astype(np.float32)
-                self.transVecInvList.append(transVecInv)
+            self.cam.append(lpt.math.Camera(values))
                 
         # Update status 
         dpg.set_value('vscCamStatus', 'Status: Finish!')
@@ -539,23 +368,12 @@ class Vsc:
         
         for tag in dpg.get_item_children('vscCamFileTable')[1]:
             dpg.delete_item(tag)
-        for tag in dpg.get_item_children('vscCamParamTable')[1]:
-            dpg.delete_item(tag)
         
         for i in range(self.nCam):
             with dpg.table_row(parent='vscCamFileTable'):
                 dpg.add_text('Cam'+str(i+1))
                 dpg.add_text(self.camFileName[i])
                 dpg.add_text(self.camFilePath[i])
-
-            with dpg.table_row(parent='vscCamParamTable'):
-                dpg.add_text('Cam'+str(i+1))
-                dpg.add_text(str(self.camMatList[i]))
-                dpg.add_text(str(self.distCoeffList[i]))
-                dpg.add_text(str(self.rotMatList[i]))
-                dpg.add_text(str(self.transVecList[i]))
-                dpg.add_text(str(self.camcalibErrList[i]))
-                dpg.add_text(str(self.posecalibErrList[i]))
     
         # Update camera fix table 
         for tag in dpg.get_item_children('vscCamFixTable')[1]:
@@ -565,24 +383,94 @@ class Vsc:
                 dpg.add_text('Cam'+str(i+1))
                 dpg.add_checkbox(tag='vscCamFixTable'+str(i), default_value=False)     
     
+    
+    # plot options 
+    def plotImportedTracks(self, sender=None, app_data=None):
+        # plot 3d tracks
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.plot(self.tracks['WorldX'], self.tracks['WorldY'], self.tracks['WorldZ'], 'b.', markersize=0.5)
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+        ax.set_title('Imported Tracks')
+        plt.savefig(self.camFilePath[0].replace(self.camFileName[0],'tracks.png'), dpi=600)
+        plt.close()
+        Texture.createTexture('vscPlot', cv2.imread(self.camFilePath[0].replace(self.camFileName[0],'tracks.png')))
+        
+    def plotLoss(self, sender=None, app_data=None):
+        # plot loss
+        plt.figure()
+        plt.plot(np.arange(len(self.loss)), self.loss,'.-')
+        plt.xlabel('Iteration')
+        plt.ylabel('Loss')
+        plt.title('Optimization History')
+        plt.savefig(self.camFilePath[0].replace(self.camFileName[0],'loss.png'), dpi=600)
+        plt.close()
+        Texture.createTexture('vscPlot', cv2.imread(self.camFilePath[0].replace(self.camFileName[0],'loss.png')))
+    
+    def plotSelectedParticles(self, sender=None, app_data=None):
+        # get updated particle info
+        npts = len(self.pt2d_list_lpt[0]) 
+        line_list_all = []
+        for i in range(self.nCam):
+            line_list = self.cam_update[i].lineOfSight(self.pt2d_list_lpt[i])
+            line_list_all.append(line_list)
+        # triangulation
+        sight_list_all = [[line_list_all[j][i] for j in range(self.nCam)] for i in range(npts)]
+        pt3d_list, _ = lpt.math.triangulation(sight_list_all)
+        pt3d_np = np.array([[pt3d_list[i][0], pt3d_list[i][1], pt3d_list[i][2]] for i in range(npts)])
+        
+        # plot 3d particles
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.plot(self.particleInfo[:,0], self.particleInfo[:,1], self.particleInfo[:,2], 'b.', markersize=0.5, label='Before Optimization')
+        ax.plot(pt3d_np[:,0], pt3d_np[:,1], pt3d_np[:,2], 'r+', markersize=0.5, label='After Optimization')
+        plt.legend()
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+        ax.set_title('Selected Particles')
+        plt.savefig(self.camFilePath[0].replace(self.camFileName[0],'particles.png'), dpi=600)
+        plt.close()
+        Texture.createTexture('vscPlot', cv2.imread(self.camFilePath[0].replace(self.camFileName[0],'particles.png')))
+    
+    
+    # File IO
     def cancelCamImportFile(self, sender=None, app_data=None):
         dpg.hide_item('file_dialog_vscCam')
     
     def openTracksFile(self, sender=None, app_data=None):
-        self.tracksFilePath = app_data['file_path_name']
-        self.tracksFileName = app_data['file_name']
+        self.tracksFilePath = []
+        self.tracksFileName = []
+        self.tracks = pd.DataFrame()
         
-        if os.path.isfile(self.tracksFilePath) is False:
+        selections = app_data['selections']
+        nFiles = len(selections)
+        if nFiles == 0:
             dpg.configure_item('noVscPath', show=True)
-            dpg.add_text('Wrong path:', parent='noVscPath')
-            dpg.add_text(self.tracksFilePath, parent='noVscPath')
+            dpg.set_value('noVscPathText', 'No file selected!')
             return
-                    
-        # Load tracks data
-        self.tracks = pd.read_csv(self.tracksFilePath)
+        
+        for keys, values in selections.items():
+            if os.path.isfile(values) is False:
+                dpg.configure_item('noVscPath', show=True)
+                dpg.set_value('noVscPathText', 'Wrong path:\n'+values)
+                return
+            self.tracksFilePath.append(values)
+            self.tracksFileName.append(keys)
+        
+        for i in range(nFiles):
+            df = pd.read_csv(self.tracksFilePath[i])
+            if not self.tracks.empty:
+                df['TrackID'] += self.tracks['TrackID'].unique().shape[0]
+            self.tracks = pd.concat([self.tracks, df], axis=0, ignore_index=True)
+        self.tracks.reset_index(drop=True, inplace=True)
         
         # Update status 
         dpg.set_value('vscTracksStatus', 'Status: Finish!')
+        
+        dpg.configure_item('vscPlotButton_importedTracks', show=True)
         
         # Print tracks output 
         dpg.configure_item('vscTracksOutputParent', show=True)
@@ -590,9 +478,10 @@ class Vsc:
         for tag in dpg.get_item_children('vscTracksFileTable')[1]:
             dpg.delete_item(tag)
         
-        with dpg.table_row(parent='vscTracksFileTable'):
-            dpg.add_text(self.tracksFileName)
-            dpg.add_text(self.tracksFilePath)
+        for i in range(len(self.tracksFileName)):
+            with dpg.table_row(parent='vscTracksFileTable'):
+                dpg.add_text(self.tracksFileName[i])
+                dpg.add_text(self.tracksFilePath[i])
         
         for i in range(len(self.tracks.head())):
             with dpg.table_row(parent='vscTracksDataTable'):
@@ -615,11 +504,11 @@ class Vsc:
         selections = app_data['selections']
         if len(selections) == 0:
             dpg.configure_item('noVscPath', show=True)
-            dpg.add_text('No file selected', parent='noVscPath')
+            dpg.set_value("noVscPathText", 'No file selected')
             return
         elif len(selections) != self.nCam:
             dpg.configure_item('noVscPath', show=True)
-            dpg.add_text('The number of selected files does not match the number of cameras', parent='noVscPath')
+            dpg.set_value("noVscPathText", 'The number of selected files does not match the number of cameras')
             return
         
         self.imgFilePath = []
@@ -627,8 +516,7 @@ class Vsc:
         for keys, values in selections.items():
             if os.path.isfile(values) is False:
                 dpg.configure_item('noVscPath', show=True)
-                dpg.add_text('Wrong path:', parent='noVscPath')
-                dpg.add_text(values, parent='noVscPath')
+                dpg.set_value("noVscPathText", 'Wrong path:\n'+values)
                 return
             self.imgFilePath.append(values)
             self.imgFileName.append(keys)
@@ -664,43 +552,11 @@ class Vsc:
             return
         dpg.configure_item('exportVscError', show=False)
         
-        rotVecList, transVecList = self.optParam
         # Export optimized camera file
         for i in range(self.nCam):
-            if i not in self.camFixID:
+            if not self.isCamFix[i]:
                 filePath = os.path.join(self.exportFolderPath, self.exportFilePrefix+'cam'+str(i+1)+'.txt')
-                with open(filePath, 'w') as f:
-                    f.write('# Camera Model: (PINHOLE/POLYNOMIAL)\n' + str('PINHOLE') + '\n')
-                    f.write('# Camera Calibration Error: \n' + str(self.camcalibErrList[i]) + '\n')
-                    f.write('# Pose Calibration Error: \n' + str(self.posecalibErrList[i]) + '\n')
-                    
-                    f.write('# Image Size: (n_row,n_col)\n')
-                    f.write(str(self.imgNrowNcolList[i][0])+','+str(self.imgNrowNcolList[i][1])+'\n')
-                    
-                    f.write('# Camera Matrix: \n')
-                    f.write(str(self.camMatList[i][0,0])+','+str(self.camMatList[i][0,1])+','+str(self.camMatList[i][0,2])+'\n')
-                    f.write(str(self.camMatList[i][1,0])+','+str(self.camMatList[i][1,1])+','+str(self.camMatList[i][1,2])+'\n')
-                    f.write(str(self.camMatList[i][2,0])+','+str(self.camMatList[i][2,1])+','+str(self.camMatList[i][2,2])+'\n')
-                    f.write('# Distortion Coefficients: \n')
-                    f.write(str(self.distCoeffList[i][0,0])+','+str(self.distCoeffList[i][0,1])+','+str(self.distCoeffList[i][0,2])+','+str(self.distCoeffList[i][0,3])+','+str(self.distCoeffList[i][0,4])+'\n')
-                    
-                    f.write('# Rotation Vector: \n')
-                    f.write(str(rotVecList[i][0,0])+','+str(rotVecList[i][1,0])+','+str(rotVecList[i][2,0])+'\n')
-                    f.write('# Rotation Matrix: \n')
-                    rotMat = cv2.Rodrigues(rotVecList[i])[0]
-                    f.write(str(rotMat[0,0])+','+str(rotMat[0,1])+','+str(rotMat[0,2])+'\n')
-                    f.write(str(rotMat[1,0])+','+str(rotMat[1,1])+','+str(rotMat[1,2])+'\n')
-                    f.write(str(rotMat[2,0])+','+str(rotMat[2,1])+','+str(rotMat[2,2])+'\n')
-                    f.write('# Inverse of Rotation Matrix: \n')
-                    rotMatInv = np.linalg.inv(rotMat)
-                    f.write(str(rotMatInv[0,0])+','+str(rotMatInv[0,1])+','+str(rotMatInv[0,2])+'\n')
-                    f.write(str(rotMatInv[1,0])+','+str(rotMatInv[1,1])+','+str(rotMatInv[1,2])+'\n')
-                    f.write(str(rotMatInv[2,0])+','+str(rotMatInv[2,1])+','+str(rotMatInv[2,2])+'\n')
-                    f.write('# Translation Vector: \n')
-                    f.write(str(transVecList[i][0,0])+','+str(transVecList[i][1,0])+','+str(transVecList[i][2,0])+'\n')
-                    f.write('# Inverse of Translation Vector: \n')
-                    transVecInv = -np.matmul(rotMatInv, transVecList[i])
-                    f.write(str(transVecInv[0,0])+','+str(transVecInv[1,0])+','+str(transVecInv[2,0])+'\n')
+                self.cam_update[i].saveParameters(filePath)
             
         dpg.configure_item("exportVsc", show=False)
         dpg.configure_item('vscExportFolder', show=True)

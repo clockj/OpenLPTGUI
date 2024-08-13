@@ -33,6 +33,10 @@ class Interface:
         self.subwindow_width = int(0.98 * self.window_width)
         self.subwindow_height = int(0.9 * self.window_height)
         
+        # # create temp folders to save images
+        # if not os.path.exists('temp'):
+        #     os.mkdir('temp')
+        
         print(f"Screen Width: {self.screen_width}")
         print(f"Screen Height: {self.screen_height}")
         print(f"Window Width: {self.window_width}")
@@ -58,15 +62,25 @@ class Interface:
             dpg.add_button(label='Apply Model', callback=self.selectCamModel)
             dpg.add_text('')
             
-            dpg.add_text('3. Image Preprocessing (Optional)')
+            dpg.add_text('3. Preprocess images (Optional)')
             dpg.add_button(label='Run Preprocessing', callback=lambda: dpg.configure_item('imgProcess', show=True))
+            dpg.add_text('')
+            
+            dpg.add_separator()
+            dpg.add_text('Note:')
+            dpg.add_text('Step 4. and 5. require the pyOpenLPT package to be installed in the current python environment.')
+            with dpg.group(horizontal=True):
+                dpg.add_text('Download the pyOpenLPT package:')
+                dpg.add_text('https://github.com/clockj/OpenLPT.git')
+                dpg.add_button(label='Copy URL', callback=lambda: dpg.set_clipboard_text('https://github.com/clockj/OpenLPT.git'))
+            dpg.add_separator()
             dpg.add_text('')
             
             dpg.add_text('4. Run OpenLPT')
             dpg.add_button(label='Run OpenLPT', callback=lambda: dpg.configure_item('openLPT', show=True))
             dpg.add_text('')
             
-            dpg.add_text('5. Run Volume Self Calibration (Optional, suggested for few calibration points)')
+            dpg.add_text('5. Run volume self calibration (Optional, suggested for few calibration points)')
             dpg.add_button(label='Run VSC', callback=lambda: dpg.configure_item('vsc', show=True))
             dpg.add_text('')
             
@@ -140,7 +154,7 @@ class Interface:
             dpg.add_separator()
             dpg.add_text("You MUST enter a File Name to select a directory")
             dpg.add_button(width=-1, label='Select the directory', callback=self.callbacks.imageProcessing.exportImageDirectorySelector)
-            dpg.add_file_dialog(directory_selector=True, width=0.7*self.subwindow_width, height=0.7*self.subwindow_height,  min_size=[400,300], show=False, tag='exportImageDirectorySelector', id="exportImageDirectorySelector", callback=lambda sender, app_data: self.callbacks.imageProcessing.exportImageSelectDirectory(sender, app_data))
+            dpg.add_file_dialog(directory_selector=True, width=0.7*self.subwindow_width, height=0.9*self.subwindow_height,  min_size=[400,300], show=False, tag='exportImageDirectorySelector', id="exportImageDirectorySelector", callback=lambda sender, app_data: self.callbacks.imageProcessing.exportImageSelectDirectory(sender, app_data))
             dpg.add_separator()
             dpg.add_text('File Name: ', tag='exportImageFileName')
             dpg.add_text('Complete Path Name: ', tag='exportImageFilePath')
