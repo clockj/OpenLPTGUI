@@ -214,7 +214,19 @@ def showRun(callbacks):
             dpg.add_text('Status: --', tag='lptRun_Run_mainConfigStatus')
             dpg.add_separator()
             
-            dpg.add_text('2. Run OpenLPT')
+            with dpg.group(horizontal=True):
+                dpg.add_text('2. Check Object Identification (Optional)')
+                dpg.add_button(label='?', callback=callbacks.lptRun.helpObjFinder)
+            dpg.add_text('Select one object type for identification')
+            dpg.add_listbox( tag='lptRun_Run_objFinder_objType_input')
+            dpg.add_text('Select one camera for visualization')
+            dpg.add_listbox( tag='lptRun_Run_objFinder_cam_input', callback=callbacks.lptRun.updateImage)
+            dpg.add_text('Enter frame ID', tag='lptRun_Run_objFinder_frameID_text')
+            dpg.add_input_int(tag='lptRun_Run_objFinder_frameID_input', callback=callbacks.lptRun.updateImage)
+            dpg.add_button(label='Check', callback=callbacks.lptRun.checkObjFinder, tag='lptRun_Run_objFinder_checkButton')
+            dpg.add_separator()
+            
+            dpg.add_text('3. Run OpenLPT')
             dpg.add_button(label='Run', callback=callbacks.lptRun.runOpenLPT, tag='lptRun_Run_runButton', show=False)
             dpg.add_text('Status: --', tag='lptRun_Run_processStatus')
             
@@ -229,14 +241,27 @@ def showRun(callbacks):
                 dpg.add_text("", tag="lptRun_Run_noPathText")
                 dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("lptRun_Run_noPath", show=False))
                 
+            # help window 
+            with dpg.window(label="Help!", modal=True, show=False, tag="lptRun_Run_help", no_title_bar=False, width=0.3*subwindow_width, height=0.3*subwindow_height, pos=[0.35*subwindow_width,0.35*subwindow_height]):
+                dpg.add_text("", tag="lptRun_Run_helpText", wrap=0.295*subwindow_width)
+                dpg.add_text("")
+                dpg.add_separator()
+                dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("lptRun_Run_help", show=False))
+                
                    
         with dpg.child_window(show=True):
             dpg.add_text('OpenLPT Output')
             dpg.add_separator()
             
             dpg.add_text('Main Config File: --', tag='lptRun_Run_mainConfigFile')
-            
             dpg.add_text('Result Folder: --', tag='lptRun_Run_resultFolder')
+            dpg.add_separator()
+            
+            with dpg.plot(tag="lptRun_Run_PlotParent", label='OpenLPT Plot', height=-1, width=-1):
+                dpg.add_plot_legend()
+                dpg.add_plot_axis(dpg.mvXAxis, label="x", tag="lptRun_Run_Plot_x_axis")
+                dpg.add_plot_axis(dpg.mvYAxis, label="y", tag="lptRun_Run_Plot_y_axis", invert=True)
+            
             
 
 def showPostProcessing(callbacks):

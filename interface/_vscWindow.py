@@ -61,6 +61,10 @@ def showVSC(callbacks):
             dpg.add_input_float(tag='inputVscTolerance', default_value=1e-6, format='%.3e')
             dpg.add_button(label='Run VSC', callback=callbacks.vsc.runVsc)
             dpg.add_text('Status: --', tag='vscStatus')
+            dpg.add_text('Selecting good tracks: --', tag='vscStatus_goodTracks')
+            dpg.add_text('Selecting particles: --', tag='vscStatus_particles')
+            dpg.add_text('Extracting particle info: --', tag='vscStatus_particleInfo')
+            dpg.add_text('Optimizing: --', tag='vscStatus_optimize')
             dpg.add_separator()
                    
             with dpg.group(tag='vscExportParent', show=False):  
@@ -103,6 +107,7 @@ def showVSC(callbacks):
                 dpg.add_button(tag='vscPlotButton_importedTracks', label='Imported Tracks', callback=callbacks.vsc.plotImportedTracks, show=False)
                 dpg.add_button(tag='vscPlotButton_loss', label='Loss', callback=callbacks.vsc.plotLoss, show=False)
                 dpg.add_button(tag='vscPlotButton_selectedParticles', label='Selected Particles', callback=callbacks.vsc.plotSelectedParticles, show=False)
+                dpg.add_button(tag='vscPlotButton_errhist', label='Error Histogram', callback=callbacks.vsc.plotErrorHistogram, show=False)
             dpg.add_separator()
                 
                 

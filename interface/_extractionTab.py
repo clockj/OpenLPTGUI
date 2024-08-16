@@ -8,64 +8,78 @@ def showContourExtraction(callbacks):
         with dpg.child_window(width=0.3*subwindow_width,horizontal_scrollbar=True):
             dpg.add_text('Find Contour')
             dpg.add_separator()
-            # dpg.add_text('Approximation Mode')
-            # dpg.add_listbox(tag='approximationModeListbox', items=['None', 'Simple', 'TC89_L1', 'TC89_KCOS'], width=-1)
-            dpg.add_text('Region Size Range (Diameter)')
+            
+            with dpg.group(horizontal=True):
+                dpg.add_text('Diameter range of calibration dots')
+                dpg.add_button(label='?', callback=callbacks.contourExtraction.helpDiaRange)
             dpg.add_input_float(tag='regionSizeMin', label="Min", default_value=3, step=-1)
             dpg.add_input_float(tag='regionSizeMax', label="Max", default_value=50, step=-1)
-            with dpg.window(label="ERROR! Max size cannot be smaller than min size!", modal=True, show=False, tag="errRange", no_title_bar=False):
-                dpg.add_text("ERROR: You must reset the size values.")
-                dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("errRange", show=False))
             
             dpg.add_button(tag='extractContourButton', width=-1, label='Apply Method', callback=lambda sender, app_data: callbacks.contourExtraction.extractContour(sender, app_data))
-            with dpg.window(label="ERROR! The image must be in a binary color scheme!", modal=True, show=False, tag="nonBinary", no_title_bar=False):
-                dpg.add_text("ERROR: You must select a binarization filter on the Thresholding Tab.")
-                dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("nonBinary", show=False))
-            
             dpg.add_separator()
+            
+            with dpg.group(horizontal=True):
+                dpg.add_checkbox(label='Remove Wrong Points', tag='removeWrongPts', default_value=False)
+                dpg.add_button(label='?', callback=callbacks.contourExtraction.helpRemovePts)
+            dpg.add_button(label='Remove', callback=callbacks.contourExtraction.removePts)
             dpg.add_separator()
             
             with dpg.group(tag='Extract Plane Coordinate',show=False):
                 dpg.add_text('Extract Plane Coordinates')
-
-                dpg.add_text('Input threshold to find axis points')
-                dpg.add_input_float(tag='axisThreshold', default_value=10, step=-1)
                 
-                dpg.add_text('Enter index for each axis')
-                # dpg.add_input_int(tag='AxisID_Bottom',label='Bottom ID', default_value=-7, step=-1)
-                # dpg.add_input_int(tag='AxisID_Top',label='Top ID', default_value=7, step=-1)
-                # dpg.add_input_int(tag='AxisID_Left',label='Left ID', default_value=-9, step=-1)
-                # dpg.add_input_int(tag='AxisID_Right',label='Right ID', default_value=9, step=-1)
-                dpg.add_input_int(tag='AxisID_Bottom',label='Bottom ID', default_value=-6, step=-1)
+                with dpg.group(horizontal=True):
+                    dpg.add_text('Enter index for each axis')
+                    dpg.add_button(label='?', callback=callbacks.contourExtraction.helpAxisIndex)
+                dpg.add_input_int(tag='AxisID_Bottom',label='Bottom ID', default_value=-7, step=-1)
                 dpg.add_input_int(tag='AxisID_Top',label='Top ID', default_value=7, step=-1)
-                dpg.add_input_int(tag='AxisID_Left',label='Left ID', default_value=-13, step=-1)
-                dpg.add_input_int(tag='AxisID_Right',label='Right ID', default_value=10, step=-1)
+                dpg.add_input_int(tag='AxisID_Left',label='Left ID', default_value=-9, step=-1)
+                dpg.add_input_int(tag='AxisID_Right',label='Right ID', default_value=9, step=-1)
+                # dpg.add_input_int(tag='AxisID_Bottom',label='Bottom ID', default_value=-6, step=-1)
+                # dpg.add_input_int(tag='AxisID_Top',label='Top ID', default_value=7, step=-1)
+                # dpg.add_input_int(tag='AxisID_Left',label='Left ID', default_value=-13, step=-1)
+                # dpg.add_input_int(tag='AxisID_Right',label='Right ID', default_value=10, step=-1)
                 
-                dpg.add_text('Select the four corners')
+                with dpg.group(horizontal=True):
+                    dpg.add_text('Select the four corners')
+                    dpg.add_button(label='?', callback=callbacks.contourExtraction.helpSelectCorners)
                 dpg.add_text('Bottom Left -> Top Left -> Top Right -> Bottom Right')
                 dpg.add_button(tag='selectCorners',label='Select corners',callback=callbacks.contourExtraction.selectCorners)
                 dpg.add_text('BL: --',tag='selectCorners1')
                 dpg.add_text('TL: --',tag='selectCorners2')
                 dpg.add_text('TR: --',tag='selectCorners3')
-                dpg.add_text('BR: --',tag='selectCorners4')    
+                dpg.add_text('BR: --',tag='selectCorners4') 
+                dpg.add_separator()
+                
+                with dpg.group(horizontal=True):
+                    dpg.add_text('Input threshold to find axis points')
+                    dpg.add_button(label='?', callback=callbacks.contourExtraction.helpAxisThreshold)
+                dpg.add_input_float(tag='axisThreshold', default_value=10, step=-1)   
 
                 dpg.add_button(tag='extractPtOnPlane', label='Extract points on the plane', callback=callbacks.contourExtraction.extractPoints)
+                dpg.add_separator()
                 
-            dpg.add_separator()
-            dpg.add_separator()
             with dpg.group(tag='Extract World Coordinate',show=False):  
                 dpg.add_text('Extract World Coordinates')
                 dpg.add_text('Enter depth coordinate for the plane:')
                 dpg.add_input_float(tag='Axis3',label='In physical unit', step=-1)
                 dpg.add_text('Enter distance between calibration dots:')
-                dpg.add_input_float(tag='dist',label='Distance',default_value=0.5, step=-1)
+                dpg.add_input_float(tag='dist',label='in physical unit',default_value=0.5, step=-1)
                 dpg.add_text('The world axis for plane axis x is:')
                 dpg.add_listbox(tag='mouseAxisX', items=['x', 'y', 'z'], width=-1, default_value='x')
                 dpg.add_text('The world axis for plane axis y is:')
                 dpg.add_listbox(tag='mouseAxisY', items=['x', 'y', 'z'], width=-1, default_value='y')
                 
                 dpg.add_button(tag='extractWorldCoordinate', label='Extract world coordinate', callback=callbacks.contourExtraction.extractWorldCoordinate)
-                
+              
+            
+            # error window
+            with dpg.window(label="ERROR! The image must be binirized!", modal=True, show=False, tag="nonBinary", no_title_bar=False):
+                dpg.add_text("ERROR: You must select a binarization method in the Thresholding Tab.")
+                dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("nonBinary", show=False))
+            
+            with dpg.window(label="ERROR! Max size cannot be smaller than min size!", modal=True, show=False, tag="errRange", no_title_bar=False):
+                dpg.add_text("ERROR: You must reset the size values.")
+                dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("errRange", show=False))
             
             with dpg.window(label="ERROR! The previous corner selection is not finished!", modal=True, show=False, tag="errCorners", no_title_bar=False):
                 dpg.add_text("ERROR: You must finish selecting the corners.")
@@ -78,6 +92,14 @@ def showContourExtraction(callbacks):
             with dpg.window(label="ERROR! The world axis for x and y must be different!", modal=True, show=False, tag="errMouseAxis", no_title_bar=False):
                 dpg.add_text("ERROR: You must reselect world axis.")
                 dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("errMouseAxis", show=False))
+            
+            
+            # help window shown in the middle
+            with dpg.window(label="Help!", modal=True, show=False, tag="extraTab_help", no_title_bar=False, width=0.3*subwindow_width, height=0.3*subwindow_height, pos=[0.35*subwindow_width,0.35*subwindow_height]):
+                dpg.add_text("", tag="extraTab_helpText", wrap=0.295*subwindow_width)
+                dpg.add_text("")
+                dpg.add_separator()
+                dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("extraTab_help", show=False))
             
             
             with dpg.window(label="Save Files", modal=False, show=False, tag="exportCenters", no_title_bar=False, min_size=[600,255]):
@@ -127,12 +149,11 @@ def showContourExtraction(callbacks):
                 dpg.add_text("Missing file name or directory.", tag="exportSelectedContourError", show=False)
         
         with dpg.child_window(tag='ContourExtractionParent'):
-            with dpg.plot(tag="ContourExtractionPlotParent", label="ContourExtraction", height=-1, width=-1):
+            with dpg.plot(tag="ContourExtractionPlotParent", label="ContourExtraction", height=-1, width=-1, query=True):
                 dpg.add_plot_legend()
                 dpg.add_plot_axis(dpg.mvXAxis, label="x", tag="ContourExtraction_x_axis")
-                dpg.add_plot_axis(dpg.mvYAxis, label="y", tag="ContourExtraction_y_axis")
+                dpg.add_plot_axis(dpg.mvYAxis, label="y", tag="ContourExtraction_y_axis", invert=True)
                 
                 with dpg.handler_registry(tag="selectAxis handler"):
-                    dpg.add_mouse_click_handler(button=dpg.mvMouseButton_Left,
-                                                callback=callbacks.contourExtraction.createAxis)
+                    dpg.add_mouse_click_handler(button=dpg.mvMouseButton_Left, callback=callbacks.contourExtraction.createAxis)
                 

@@ -83,20 +83,6 @@ class CamCalibImageProcess:
                 'tab': 'Thresholding'
             },
             {
-                'method': self.laplacian,
-                'name': self.laplacian.__name__,
-                'status': False,
-                'output': None,
-                'tab': 'Thresholding'
-            },
-            {
-                'method': self.sobel,
-                'name': self.sobel.__name__,
-                'status': False,
-                'output': None,
-                'tab': 'Thresholding'
-            },
-            {
                 'method': self.globalThresholding,
                 'name': self.globalThresholding.__name__,
                 'status': False,
@@ -132,8 +118,6 @@ class CamCalibImageProcess:
                 'tab': 'ContourExtraction'
             },
         ]
-
-        pass
 
 
     def executeQuery(self, methodName):
@@ -184,7 +168,8 @@ class CamCalibImageProcess:
 
     def retrieveFromLastActive(self, methodName, sender = None, app_data = None):
         self.blocks[self.getIdByMethod(methodName)]['output'] = self.blocks[self.getLastActiveBeforeMethod(methodName)]['output'].copy()
-        Texture.updateTexture(self.blocks[self.getIdByMethod(methodName)]['tab'], self.blocks[self.getIdByMethod(methodName)]['output'])
+        # Texture.updateTexture(self.blocks[self.getIdByMethod(methodName)]['tab'], self.blocks[self.getIdByMethod(methodName)]['output'])
+        Texture.updateTexture(self.blocks[self.getIdByMethod(methodName)]['tab'], np.flipud(self.blocks[self.getIdByMethod(methodName)]['output']))
 
     def getLastActiveBeforeMethod(self, methodName):
         lastActiveIndex = 0
@@ -230,7 +215,6 @@ class CamCalibImageProcess:
         dpg.set_value("averageBlurSlider",1)
         # dpg.set_value("gaussianBlurSlider",1)
         dpg.set_value("medianBlurSlider",1)
-        dpg.set_value("laplacianSlider",1)
         dpg.set_value("globalThresholdSlider",127)
         
         try:
@@ -258,7 +242,8 @@ class CamCalibImageProcess:
     def importImage(self, sender = None, app_data = None):
         self.blocks[Blocks.importImage.value]['output'] = self.openImage(self.filePath)
 
-        Texture.createAllTextures(self.blocks[Blocks.importImage.value]['output'])
+        # Texture.createAllTextures(self.blocks[Blocks.importImage.value]['output'])
+        Texture.createAllTextures(np.flipud(self.blocks[Blocks.importImage.value]['output']))
 
         dpg.set_value('file_name_text', 'File Name: ' + self.fileName)
         dpg.set_value('file_path_text', 'File Path: ' + self.filePath)
@@ -273,13 +258,13 @@ class CamCalibImageProcess:
         dpg.configure_item("exportImageAsFileProcessingGroup", show=True)
         dpg.configure_item("exportImageAsFileFilteringGroup", show=True)
         dpg.configure_item("exportImageAsFileThresholdingGroup", show=True)
-        pass
     
     def invertImage(self, sender=None, app_data=None):
         image = self.blocks[self.getLastActiveBeforeMethod('invertImage')]['output']
         image = cv2.bitwise_not(image)
         self.blocks[Blocks.invertImage.value]['output'] = image
-        Texture.updateTexture(self.blocks[Blocks.invertImage.value]['tab'], image)
+        # Texture.updateTexture(self.blocks[Blocks.invertImage.value]['tab'], image)
+        Texture.updateTexture(self.blocks[Blocks.invertImage.value]['tab'], np.flipud(image))
     
     def setAreaColor(self, sender=None, app_data=None):
         if self.blocks[Blocks.setAreaColor.value]['isFirst']:
@@ -299,8 +284,10 @@ class CamCalibImageProcess:
                      
             colMin = max(int(region[0]), 0)   
             colMax = min(int(region[1]), self.width-1)
-            rowMin = max(int(self.height - region[3]), 0)
-            rowMax = min(int(self.height - region[2]), self.height-1)
+            # rowMin = max(int(self.height - region[3]), 0)
+            # rowMax = min(int(self.height - region[2]), self.height-1)
+            rowMin = max(int(region[2]), 0)
+            rowMax = min(int(region[3]), self.height-1)
             
             if rowMin != rowMax or colMin != colMax:
                 img[rowMin:rowMax, colMin:colMax, 0] = int(color[2])
@@ -308,8 +295,8 @@ class CamCalibImageProcess:
                 img[rowMin:rowMax, colMin:colMax, 2] = int(color[0])
             
             self.blocks[Blocks.setAreaColor.value]['output'] = img
-            Texture.updateTexture(self.blocks[Blocks.setAreaColor.value]['tab'], img)
-        pass
+            # Texture.updateTexture(self.blocks[Blocks.setAreaColor.value]['tab'], img)
+            Texture.updateTexture(self.blocks[Blocks.setAreaColor.value]['tab'], np.flipud(img))
         
     def histogramEqualization(self, sender=None, app_data=None):
 
@@ -317,8 +304,8 @@ class CamCalibImageProcess:
         img_yuv[:,:,0] = cv2.equalizeHist(img_yuv[:,:,0])
         dst = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
         self.blocks[Blocks.histogramEqualization.value]['output'] = dst
-        Texture.updateTexture(self.blocks[Blocks.histogramEqualization.value]['tab'], dst)
-        pass
+        # Texture.updateTexture(self.blocks[Blocks.histogramEqualization.value]['tab'], dst)
+        Texture.updateTexture(self.blocks[Blocks.histogramEqualization.value]['tab'], np.flipud(dst))
 
     def brightnessAndContrast(self, sender=None, app_data=None):
 
@@ -328,8 +315,8 @@ class CamCalibImageProcess:
         outputImage = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
 
         self.blocks[Blocks.brightnessAndContrast.value]['output'] = outputImage
-        Texture.updateTexture(self.blocks[Blocks.brightnessAndContrast.value]['tab'], outputImage)
-        pass
+        # Texture.updateTexture(self.blocks[Blocks.brightnessAndContrast.value]['tab'], outputImage)
+        Texture.updateTexture(self.blocks[Blocks.brightnessAndContrast.value]['tab'], np.flipud(outputImage))
 
     def averageBlur(self, sender=None, app_data=None):
         image = self.blocks[self.getLastActiveBeforeMethod('averageBlur')]['output']
@@ -339,8 +326,8 @@ class CamCalibImageProcess:
         dst = cv2.filter2D(image,-1,kernel)
 
         self.blocks[Blocks.averageBlur.value]['output'] = dst
-        Texture.updateTexture(self.blocks[Blocks.averageBlur.value]['tab'], dst)
-        pass
+        # Texture.updateTexture(self.blocks[Blocks.averageBlur.value]['tab'], dst)
+        Texture.updateTexture(self.blocks[Blocks.averageBlur.value]['tab'], np.flipud(dst))
 
     def gaussianBlur(self, sender=None, app_data=None):
         image = self.blocks[self.getLastActiveBeforeMethod('gaussianBlur')]['output']
@@ -350,8 +337,8 @@ class CamCalibImageProcess:
         dst = cv2.GaussianBlur(image, (kernelSize,kernelSize), sigma)
 
         self.blocks[Blocks.gaussianBlur.value]['output'] = dst
-        Texture.updateTexture(self.blocks[Blocks.gaussianBlur.value]['tab'], dst)
-        pass
+        # Texture.updateTexture(self.blocks[Blocks.gaussianBlur.value]['tab'], dst)
+        Texture.updateTexture(self.blocks[Blocks.gaussianBlur.value]['tab'], np.flipud(dst))
 
     def medianBlur(self, sender=None, app_data=None):
         image = self.blocks[self.getLastActiveBeforeMethod('medianBlur')]['output']
@@ -360,8 +347,8 @@ class CamCalibImageProcess:
         median = cv2.medianBlur(image, kernel)
 
         self.blocks[Blocks.medianBlur.value]['output'] = median
-        Texture.updateTexture(self.blocks[Blocks.medianBlur.value]['tab'], median)
-        pass
+        # Texture.updateTexture(self.blocks[Blocks.medianBlur.value]['tab'], median)
+        Texture.updateTexture(self.blocks[Blocks.medianBlur.value]['tab'], np.flipud(median))
 
     def grayscale(self, sender=None, app_data=None):
 
@@ -377,34 +364,8 @@ class CamCalibImageProcess:
         image[:, :, 2] = grayMask
 
         self.blocks[Blocks.grayscale.value]['output'] = image
-        Texture.updateTexture(self.blocks[Blocks.grayscale.value]['tab'], image)
-
-    def laplacian(self, sender=None, app_data=None):
-        image = self.blocks[Blocks.grayscale.value]['output'].copy()
-
-        kernelSize = (2 * dpg.get_value('laplacianSlider')) - 1
-        laplacian = cv2.Laplacian(image, cv2.CV_8U, ksize=kernelSize)
-                
-        self.blocks[Blocks.laplacian.value]['output'] = laplacian
-        Texture.updateTexture(self.blocks[Blocks.laplacian.value]['tab'], laplacian)
-        pass
-
-    def sobel(self, sender=None, app_data=None):
-        image = self.blocks[self.getLastActiveBeforeMethod('sobel')]['output']
-
-        sobel = None
-        value = dpg.get_value('sobelListbox')
-
-        if value == 'X-Axis':
-            sobel = cv2.Sobel(image, cv2.CV_8U, 1, 0, ksize=3)
-        elif value == 'Y-Axis':
-            sobel = cv2.Sobel(image, cv2.CV_8U, 0, 1, ksize=3)
-        elif value == 'XY-Axis':
-            sobel = cv2.bitwise_or(cv2.Sobel(image, cv2.CV_8U, 1, 0, ksize=3), cv2.Sobel(image, cv2.CV_8U, 0, 1, ksize=3))
-
-        self.blocks[Blocks.sobel.value]['output'] = sobel
-        Texture.updateTexture(self.blocks[Blocks.sobel.value]['tab'], sobel)
-        pass
+        # Texture.updateTexture(self.blocks[Blocks.grayscale.value]['tab'], image)
+        Texture.updateTexture(self.blocks[Blocks.grayscale.value]['tab'], np.flipud(image))
 
     def globalThresholding(self, sender=None, app_data=None):
         image = self.blocks[self.getLastActiveBeforeMethod('globalThresholding')]['output']
@@ -418,8 +379,8 @@ class CamCalibImageProcess:
         (T, threshInv) = cv2.threshold(image, threshold, 255, thresholdMode)
 
         self.blocks[Blocks.globalThresholding.value]['output'] = threshInv
-        Texture.updateTexture(self.blocks[Blocks.globalThresholding.value]['tab'], threshInv)
-        pass
+        # Texture.updateTexture(self.blocks[Blocks.globalThresholding.value]['tab'], threshInv)
+        Texture.updateTexture(self.blocks[Blocks.globalThresholding.value]['tab'], np.flipud(threshInv))
 
     def adaptativeMeanThresholding(self, sender=None, app_data=None):
         image = self.blocks[self.getLastActiveBeforeMethod('adaptativeMeanThresholding')]['output'].copy()
@@ -429,9 +390,8 @@ class CamCalibImageProcess:
         image = cv2.cvtColor(threshInv, cv2.COLOR_GRAY2BGR)
 
         self.blocks[Blocks.adaptativeMeanThresholding.value]['output'] = image
-        Texture.updateTexture(self.blocks[Blocks.adaptativeMeanThresholding.value]['tab'], image)
-
-        pass
+        # Texture.updateTexture(self.blocks[Blocks.adaptativeMeanThresholding.value]['tab'], image)
+        Texture.updateTexture(self.blocks[Blocks.adaptativeMeanThresholding.value]['tab'], np.flipud(image))
 
     def adaptativeGaussianThresholding(self, sender=None, app_data=None):
 
@@ -442,9 +402,8 @@ class CamCalibImageProcess:
         image = cv2.cvtColor(threshInv, cv2.COLOR_GRAY2BGR)
 
         self.blocks[Blocks.adaptativeGaussianThresholding.value]['output'] = image
-        Texture.updateTexture(self.blocks[Blocks.adaptativeGaussianThresholding.value]['tab'], image)
-
-        pass
+        # Texture.updateTexture(self.blocks[Blocks.adaptativeGaussianThresholding.value]['tab'], image)
+        Texture.updateTexture(self.blocks[Blocks.adaptativeGaussianThresholding.value]['tab'], np.flipud(image))
 
     def otsuBinarization(self, sender=None, app_data=None):
         image = self.blocks[self.getLastActiveBeforeMethod('adaptativeGaussianThresholding')]['output'].copy()
@@ -455,8 +414,8 @@ class CamCalibImageProcess:
 
 
         self.blocks[Blocks.otsuBinarization.value]['output'] = threshInv
-        Texture.updateTexture(self.blocks[Blocks.otsuBinarization.value]['tab'], threshInv)
-        pass
+        # Texture.updateTexture(self.blocks[Blocks.otsuBinarization.value]['tab'], threshInv)
+        Texture.updateTexture(self.blocks[Blocks.otsuBinarization.value]['tab'], np.flipud(threshInv))
 
     def findContour(self, sender=None, app_data=None):
 
@@ -464,8 +423,8 @@ class CamCalibImageProcess:
             return
 
         image = self.blocks[self.getLastActiveBeforeMethod('findContour')]['output'].copy()
-        Texture.updateTexture(self.blocks[Blocks.findContour.value]['tab'], image)
-        pass
+        # Texture.updateTexture(self.blocks[Blocks.findContour.value]['tab'], image)
+        Texture.updateTexture(self.blocks[Blocks.findContour.value]['tab'], np.flipud(image))
 
     def exportImage(self, sender = None, app_data = None, tab = None):
 
@@ -518,8 +477,6 @@ class CamCalibImageProcess:
             'averageBlurCheckbox',
             'gaussianBlurCheckbox',
             'medianBlurCheckbox',
-            'laplacianCheckbox',
-            'sobelCheckbox',
             'globalThresholdingCheckbox',
             'invertGlobalThresholding',
             'adaptativeThresholdingCheckbox',
@@ -542,8 +499,6 @@ class CamCalibImageProcess:
             'averageBlurCheckbox',
             'gaussianBlurCheckbox',
             'medianBlurCheckbox',
-            'laplacianCheckbox',
-            'sobelCheckbox',
             'globalThresholdingCheckbox',
             'invertGlobalThresholding',
             'adaptativeThresholdingCheckbox',
@@ -566,8 +521,6 @@ class CamCalibImageProcess:
             'averageBlurCheckbox',
             'gaussianBlurCheckbox',
             'medianBlurCheckbox',
-            'laplacianCheckbox',
-            'sobelCheckbox',
             'globalThresholdingCheckbox',
             'invertGlobalThresholding',
             'adaptativeThresholdingCheckbox',
@@ -580,4 +533,13 @@ class CamCalibImageProcess:
         ]
         for checkbox in checkboxes:
             dpg.set_value(checkbox, False)
-        pass
+        
+        
+    # help window 
+    def helpMaskArea(self, sender=None, app_data=None):
+        dpg.set_value("filteringTab_helpText", "Select the area you want to remove by clicking and dragging the middle mouse button over the image.")
+        dpg.configure_item("filteringTab_help", show=True)
+    
+    def helpRemoveNoise(self, sender=None, app_data=None):
+        dpg.set_value("filteringTab_helpText", "Choose some of the blurring method for removing noise of the image.")
+        dpg.configure_item("filteringTab_help", show=True)

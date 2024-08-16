@@ -99,14 +99,15 @@ class LptImgProcess:
     def openImgFile(self, sender=None, app_data=None):
         selections = app_data['selections']
         if len(selections) == 0:
+            dpg.set_value('noLptImgPathText', 'No image path file is selected!')
             dpg.configure_item('noLptImgPath', show=True)
-            dpg.add_text('No file selected', parent='noLptImgPath')
             return
         
         self.imgFilePath = []
         self.imgFileName = []
         self.camName = []
         self.nFrame = []
+        idx = 0
         for keys, values in selections.items():
             if os.path.isfile(values) is False:
                 dpg.configure_item('noLptImgPath', show=True)
@@ -118,12 +119,13 @@ class LptImgProcess:
                 lines = f.readlines()
                 self.nFrame.append(len(lines))
             self.imgFileName.append(keys)
-            self.camName.append(keys.replace('ImageNames.txt',''))
+            self.camName.append('cam' + str(idx+1))
+            idx += 1
         
         # configurate listbox for selecting sample image 
         dpg.configure_item('lptImgShowID', items=self.camName)
         dpg.configure_item('lptImgFrameID', max_value=max(self.nFrame)-1)
-        dpg.configure_item('lptImgFrameRangeEnd', max_value=max(self.nFrame)-1)
+        dpg.configure_item('lptImgFrameRangeEnd', max_value=max(self.nFrame)-1, default_value=max(self.nFrame)-1)
         self.importImg()
         
         # enable all tags
@@ -158,7 +160,7 @@ class LptImgProcess:
         self.width = shape[1]
         
         # update sample image
-        Texture.createTexture('lptImgProcess', self.blocks[Blocks.importImg.value]['output'])
+        Texture.createTexture('lptImgProcess', np.flipud(self.blocks[Blocks.importImg.value]['output']))
         
         # uncheck all selected effects 
         self.uncheckAllTags()
@@ -220,7 +222,7 @@ class LptImgProcess:
     
     def retrieveFromLastActive(self, methodName, sender = None, app_data = None):
         self.blocks[self.getIdByMethod(methodName)]['output'] = self.blocks[self.getLastActiveBeforeMethod(methodName)]['output'].copy()
-        Texture.updateTexture('lptImgProcess', self.blocks[self.getIdByMethod(methodName)]['output'])
+        Texture.updateTexture('lptImgProcess', np.flipud(self.blocks[self.getIdByMethod(methodName)]['output']))
         
     def toggleAndExecuteQuery(self, methodName, sender = None, app_data = None):
         self.toggleEffect(methodName, sender, app_data)
@@ -242,7 +244,7 @@ class LptImgProcess:
             outputImage = image
             
         self.blocks[Blocks.invertImg.value]['output'] = outputImage
-        Texture.updateTexture('lptImgProcess', outputImage)
+        Texture.updateTexture('lptImgProcess', np.flipud(outputImage))
     
     def invertImgfunc(self, image):
         return cv2.bitwise_not(image)
@@ -259,7 +261,7 @@ class LptImgProcess:
         outputImage = self.removeBkgfunc(image, bkg)
         
         self.blocks[Blocks.removeBkg.value]['output'] = outputImage
-        Texture.updateTexture('lptImgProcess', outputImage)
+        Texture.updateTexture('lptImgProcess', np.flipud(outputImage))
     
     def removeBkgfunc(self, image, bkg):        
         outputImage = image - bkg
@@ -291,7 +293,7 @@ class LptImgProcess:
         outputImage = self.brightnessAndContrastfunc(image, alpha, beta)
         
         self.blocks[Blocks.brightnessAndContrast.value]['output'] = outputImage
-        Texture.updateTexture('lptImgProcess', outputImage)
+        Texture.updateTexture('lptImgProcess', np.flipud(outputImage))
     
     def brightnessAndContrastfunc(self, image, alpha, beta):
         return cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
@@ -303,7 +305,7 @@ class LptImgProcess:
         outputImage = self.imAdjustfunc(image, imadjustRange)
         
         self.blocks[Blocks.imAdjust.value]['output'] = outputImage
-        Texture.updateTexture('lptImgProcess', outputImage)
+        Texture.updateTexture('lptImgProcess', np.flipud(outputImage))
     
     def imAdjustfunc(self, image, range):
         outputImage = (image - np.min(image)) / (np.max(image) - np.min(image)) * range
@@ -318,7 +320,7 @@ class LptImgProcess:
         outputImage = self.labvisionfunc(image, sigma, kernelSize)
         
         self.blocks[Blocks.labvision.value]['output'] = outputImage
-        Texture.updateTexture('lptImgProcess', outputImage)
+        Texture.updateTexture('lptImgProcess', np.flipud(outputImage))
     
     def labvisionfunc(self, image, sigma, kernelSize):
         # subtrack sliding minimum
@@ -462,6 +464,11 @@ class LptImgProcess:
         # save image
         exportPath = os.path.join(self.exportFolderPath, self.camName[camID], imgName)
         cv2.imwrite(exportPath, image)
+        
+    
+    def helpImportImgFile(self, sender=None, app_data=None):
+        dpg.set_value('lptImgProcess_helpText', '1. Image path file contains the path to all images. \n\n2. Multiple image path files can be imported. \n\n3. Image path files should have the same prefix ending with number. The order of number should be the same as the camera files.')
+        dpg.configure_item('lptImgProcess_help', show=True)
 
 
 class LptCreateImgFile:
@@ -484,7 +491,7 @@ class LptCreateImgFile:
         # Print the list of folders and its corresponding name 
         for tag in dpg.get_item_children('lptCreateImgfileTable')[1]:
             dpg.delete_item(tag)
-            
+         
         for i in range(len(self.imgFolderList)):
             folder = self.imgFolderList[i]
             with dpg.table_row(parent='lptCreateImgfileTable'):
@@ -499,6 +506,11 @@ class LptCreateImgFile:
         dpg.set_value('lptImgFileOutputFolder', 'Output Folder: ' + self.outputFolder)
     
     def createImgFiles(self, sender=None, app_data=None):
+        if self.outputFolder is None:
+            dpg.set_value('lptImgProcessCreate_noPathText', 'No output folder is selected!')
+            dpg.configure_item('lptImgProcessCreate_noPath', show=True)
+            return
+        
         # get parameters
         nameSuffix = dpg.get_value('lptImgNameSuffix')
         frameStart = dpg.get_value('lptImgFileFrameStart')
@@ -536,3 +548,8 @@ class LptCreateImgFile:
         
         # Return the sorted file paths
         return [os.path.join(folder_path, file) for file in sorted_files]
+    
+    
+    def helpSelectFolder(self, sender=None, app_data=None):
+        dpg.set_value('lptImgProcessCreate_helpText', '1. Select the main folder containing all camera folders. \n\n2. The camera folders should have the same prefix ending with number. \n\n3. The order of number should be the same as the camera files.')
+        dpg.configure_item('lptImgProcessCreate_help', show=True)

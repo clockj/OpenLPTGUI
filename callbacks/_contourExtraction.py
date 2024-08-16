@@ -61,9 +61,9 @@ class ContourExtraction:
         adaptativeGaussianThresholdSelectedFlag = dpg.get_value('adaptativeGaussianThresholdingCheckbox')
         otsuBinarizationFlag = dpg.get_value('otsuBinarization')
 
-        # if globalThresholdSelectedFlag == False and adaptativeThresholdSelectedFlag == False and adaptativeGaussianThresholdSelectedFlag == False and otsuBinarizationFlag == False:
-        #     dpg.configure_item('nonBinary', show=True)
-        #     return
+        if globalThresholdSelectedFlag == False and adaptativeThresholdSelectedFlag == False and adaptativeGaussianThresholdSelectedFlag == False and otsuBinarizationFlag == False:
+            dpg.configure_item('nonBinary', show=True)
+            return
 
         image = self.imageProcessing.blocks[self.imageProcessing.getLastActiveBeforeMethod('findContour')]['output'].copy()
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -97,9 +97,9 @@ class ContourExtraction:
         self.removeContour()
 
         thicknessValue = 1
-        self.contourCenters = np.zeros(shape=(len(contours),2))
-        for idx, contour in enumerate(contours):
-            # contourColor = (random.randint(0,255),random.randint(0,255),random.randint(0,255), 255)
+        self.contourCenters = []
+        idx = 0
+        for contour in contours:
             contourColor = (0,0,255, 255)
             contourColorBGR = (contourColor[2], contourColor[1], contourColor[0])
             
@@ -110,9 +110,8 @@ class ContourExtraction:
                 continue
             
             centerX = col
-            centerY = self.height - row
-            self.contourCenters[idx,0] = centerX
-            self.contourCenters[idx,1] = centerY
+            centerY = row
+            self.contourCenters.append([centerX, centerY])
             self.contourTableEntry.append(
                 {
                     'id': idx,
@@ -126,13 +125,15 @@ class ContourExtraction:
                     'cntRow': [x[0][1] for x in contour],
                 }
             )
+            idx += 1
+            
             center = (int(round(col)),int(round(row)))
             radius = int(radius)
             self.draw_plus(image_plot, center, color=(0, 0, 255), size=5, thickness=1)
             cv2.circle(image_plot, center, radius, contourColorBGR, thicknessValue) 
-            # cv2.drawContours(image, contour, -1, contourColor, thicknessValue)
-
-        self.contourTableEntry = list(sorted(self.contourTableEntry, key=lambda x: x['radius'], reverse=True))
+            
+        self.contourCenters = np.array(self.contourCenters)
+        # self.contourTableEntry = list(sorted(self.contourTableEntry, key=lambda x: x['radius'], reverse=True))
 
         dpg.add_separator(tag='separator1', parent='ContourExtractionParent')
         dpg.add_button(tag='toggleDrawContoursButton', width=-1, label='Hide All Contours', parent='ContourExtractionParent', callback=self.toggleDrawContours)
@@ -155,7 +156,8 @@ class ContourExtraction:
                         if j == 0:
                             dpg.add_text(contourEntry['id'])
                         if j == 1:
-                            dpg.add_color_button(default_value=contourEntry['color'])
+                            # dpg.add_color_button(default_value=contourEntry['color'])
+                            dpg.add_color_button(default_value=(contourEntry['color'][2],contourEntry['color'][1],contourEntry['color'][0]))
                         if j == 2:
                             dpg.add_checkbox(tag='checkboxContourId' + str(contourEntry['id']), callback= lambda sender, app_data: self.redrawContours(), default_value=True)
                         if j == 3:
@@ -168,11 +170,29 @@ class ContourExtraction:
                             dpg.add_button(label='Export Individual Contour', tag="exportContour" + str(contourEntry['id']), callback=self.exportButtonCall)
 
         self.imageProcessing.blocks[Blocks.findContour.value]['output'] = image_plot
-        # Texture.updateTexture(self.imageProcessing.blocks[Blocks.findContour.value]['tab'], image)
-        Texture.updateTexture(self.imageProcessing.blocks[Blocks.findContour.value]['tab'], image_plot)
+        
+        # Texture.updateTexture(self.imageProcessing.blocks[Blocks.findContour.value]['tab'], image_plot)
+        Texture.updateTexture(self.imageProcessing.blocks[Blocks.findContour.value]['tab'], np.flipud(image_plot))
         
         dpg.configure_item('Extract Plane Coordinate', show=True)
 
+    def removePts(self, sender=None, app_data=None):
+        region = dpg.get_plot_query_area(plot="ContourExtractionPlotParent")
+        
+        colMin = max(int(region[0]), 0)   
+        colMax = min(int(region[1]), self.width-1)
+        rowMin = max(int(region[2]), 0)
+        rowMax = min(int(region[3]), self.height-1)
+        
+        for i in range(self.contourCenters.shape[0]):
+            if self.contourCenters[i,0] == None:
+                continue    
+        
+            if self.contourCenters[i,0] >= colMin and self.contourCenters[i,0] <= colMax and self.contourCenters[i,1] >= rowMin and self.contourCenters[i,1] <= rowMax:
+                self.contourCenters[i,:] = None
+                dpg.set_value('checkboxContourId' + str(self.contourTableEntry[i]['id']), False)
+        self.redrawContours()
+    
     def createAxis(self, sender=None, app_data=None):
         if self.selectCornersFlag:
             if self.selectCornersCount < 4:
@@ -184,20 +204,22 @@ class ContourExtraction:
                 text = dpg.get_value(tag).replace('--', f'({pos[0]:.2f},{pos[1]:.2f})')
                 dpg.set_value(tag, text)
                 
-                image = self.imageProcessing.blocks[Blocks.findContour.value]['output']
-                pt = (int(pos[0]), self.height-int(pos[1]))
-                cv2.drawMarker(image, pt, (0,0,255), markerType=cv2.MARKER_CROSS, 
-                               markerSize=10, thickness=1)
+                image = self.imageProcessing.blocks[Blocks.findContour.value]['output'].copy()
+                # pt = (int(pos[0]), self.height-int(pos[1]))
+                pt = (int(pos[0]), int(pos[1]))
+                cv2.drawMarker(image, pt, (0,0,255), markerType=cv2.MARKER_CROSS, markerSize=10, thickness=1)
                 
                 self.selectCornersCount += 1
                 if self.selectCornersCount == 4:
                     pts = self.corners.copy()
-                    pts[:,1] = self.height - pts[:,1]
+                    # pts[:,1] = self.height - pts[:,1]
+                    pts[:,1] = pts[:,1]
                     pts = np.reshape(pts.astype(np.int32), (-1,1,2))
                     cv2.polylines(image, [pts], True, color=(0,0,255), thickness=2)
                 
-                self.imageProcessing.blocks[Blocks.findContour.value]['output'] = image
-                Texture.updateTexture(self.imageProcessing.blocks[Blocks.findContour.value]['tab'], image)
+                # self.imageProcessing.blocks[Blocks.findContour.value]['output'] = image
+                # Texture.updateTexture(self.imageProcessing.blocks[Blocks.findContour.value]['tab'], image)
+                Texture.updateTexture(self.imageProcessing.blocks[Blocks.findContour.value]['tab'], np.flipud(image))
             else:
                 self.selectCornersCount = 0
                 self.selectCornersFlag = False
@@ -218,7 +240,8 @@ class ContourExtraction:
         
         # get sign for axis id 
         signX = np.sign(RightID-LeftID)
-        signY = np.sign(TopID-BottomID)
+        # signY = np.sign(TopID-BottomID)
+        signY = np.sign(BottomID-TopID)
         
         # get number of grids on each axis
         nx = int(abs(RightID-LeftID)) + 1
@@ -242,8 +265,8 @@ class ContourExtraction:
         threshold = threshold**2
         
         # find idex matching
-        # centers = self.contourCenters[np.logical_not(np.isnan(self.contourCenters[:,0])),:]
-        centers = self.contourCenters
+        centers = self.contourCenters[np.logical_not(np.isnan(self.contourCenters[:,0])),:]
+        # centers = self.contourCenters
         ncenter = centers.shape[0]
         self.ptXYID = np.zeros(shape=(ncenter,4))
         self.ptXYID[:,0:2] = centers
@@ -251,11 +274,11 @@ class ContourExtraction:
         
         # find axis points
         axisThreshold = dpg.get_value('axisThreshold')
-        leftAxisPoints, origID, axisID = self.findAxisPoints([ptBL, ptTL], centers, axisThreshold, 'y', ny, BottomID, TopID, signY)
+        leftAxisPoints, origID, axisID = self.findAxisPoints([ptTL,ptBL], centers, axisThreshold, 'y', ny, TopID, BottomID, signY)
         self.ptXYID[origID,2] = LeftID
         self.ptXYID[origID,3] = axisID
 
-        rightAxisPoints, origID, axisID = self.findAxisPoints([ptBR, ptTR], centers, axisThreshold, 'y', ny, BottomID, TopID, signY)
+        rightAxisPoints, origID, axisID = self.findAxisPoints([ptTR, ptBR], centers, axisThreshold, 'y', ny, TopID, BottomID, signY)
         self.ptXYID[origID,2] = RightID
         self.ptXYID[origID,3] = axisID
         
@@ -278,8 +301,10 @@ class ContourExtraction:
                 lineX = [pt1, vec]
                 
                 # compute vertical line
-                pt1 = bottomAxisPoints[i]
-                pt2 = topAxisPoints[i]
+                # pt1 = bottomAxisPoints[i]
+                # pt2 = topAxisPoints[i]
+                pt1 = topAxisPoints[i]
+                pt2 = bottomAxisPoints[i]
                 vec = pt2 - pt1
                 vec /= np.linalg.norm(vec)
                 lineY = [pt1, vec]
@@ -293,22 +318,25 @@ class ContourExtraction:
                 
                 if diff[id] < threshold:
                     self.ptXYID[id, 2] = LeftID + i * signX
-                    self.ptXYID[id, 3] = BottomID + j * signY
+                    # self.ptXYID[id, 3] = BottomID + j * signY
+                    self.ptXYID[id, 3] = TopID + j * signY
                     
         # plot idex 
-        image = self.imageProcessing.blocks[self.imageProcessing.getLastActiveBeforeMethod('findContour')]['output'].copy()
+        # image = self.imageProcessing.blocks[self.imageProcessing.getLastActiveBeforeMethod('findContour')]['output'].copy()
+        image = self.imageProcessing.blocks[Blocks.findContour.value]['output'].copy()
         
         for i in range(ncenter):
             if not np.isnan(self.ptXYID[i,2]):  
-                center = (int(self.ptXYID[i,0]),int(self.height-self.ptXYID[i,1])) # convert into cv2 coordinate
+                center = (int(self.ptXYID[i,0]),int(self.ptXYID[i,1])) # convert into cv2 coordinate
                 cv2.circle(image,center,3,(0,0,255),-1)
                 
                 text = f'({int(self.ptXYID[i,2])},{int(self.ptXYID[i,3])})'
                 txtpos = (center[0]+5, center[1]-5)
                 cv2.putText(image, text, txtpos, fontScale = 0.3, fontFace=cv2.FONT_HERSHEY_SIMPLEX, color = (250,0,0))
         
-        self.imageProcessing.blocks[Blocks.findContour.value]['output'] = image
-        Texture.updateTexture(self.imageProcessing.blocks[Blocks.findContour.value]['tab'], image)
+        # self.imageProcessing.blocks[Blocks.findContour.value]['output'] = image
+        # Texture.updateTexture(self.imageProcessing.blocks[Blocks.findContour.value]['tab'], image)
+        Texture.updateTexture(self.imageProcessing.blocks[Blocks.findContour.value]['tab'], np.flipud(image))
         
         dpg.configure_item('Extract World Coordinate', show=True)
     
@@ -436,7 +464,8 @@ class ContourExtraction:
         self.centerExport[:,mouseAxisY] = centers[:,3] * unit
         self.centerExport[:,mouseAxisZ] = dpg.get_value('Axis3')
         self.centerExport[:,3] = centers[:,0]
-        self.centerExport[:,4] = self.height - centers[:,1]
+        # self.centerExport[:,4] = self.height - centers[:,1]
+        self.centerExport[:,4] = centers[:,1]
         self.centerExport[:,5] = centers[:,0]
         self.centerExport[:,6] = centers[:,1]
         
@@ -491,7 +520,6 @@ class ContourExtraction:
         # dpg.configure_item('contourExportOption', enabled=False)
         self.contourTableEntry = []
         self.showContourFlag = True
-        pass
 
     def redrawContours(self):
         # image = self.imageProcessing.blocks[self.imageProcessing.getLastActiveBeforeMethod('findContour')]['output'].copy()
@@ -508,16 +536,16 @@ class ContourExtraction:
                 self.contourCenters[entry['id'],1] = centerY
                 radius = entry['radius']
                 
-                center = (int(round(centerX)),int(round(self.height-centerY))) # convert into cv2 coordinate
+                center = (int(round(centerX)),int(round(centerY))) # convert into cv2 coordinate
                 radius = int(radius)
                 self.draw_plus(image_plot, center, color=(0, 0, 255), size=5, thickness=1)
-                cv2.circle(image_plot,center,radius,(entry['color'][2], entry['color'][1], entry['color'][0]),thicknessValue) 
-                # cv2.drawContours(image, entry['data'], -1, (entry['color'][2], entry['color'][1], entry['color'][0]), thicknessValue)
+                cv2.circle(image_plot,center,radius,(entry['color'][0], entry['color'][1], entry['color'][2]),thicknessValue) 
             else:
                 self.contourCenters[entry['id'],:] = None
 
         self.imageProcessing.blocks[Blocks.findContour.value]['output'] = image_plot
-        Texture.updateTexture(self.imageProcessing.blocks[Blocks.findContour.value]['tab'], image_plot)
+        # Texture.updateTexture(self.imageProcessing.blocks[Blocks.findContour.value]['tab'], image_plot)
+        Texture.updateTexture(self.imageProcessing.blocks[Blocks.findContour.value]['tab'], np.flipud(image_plot))
 
     def hideAllContours(self, sender = None, app_data = None):
         for entry in self.contourTableEntry:
@@ -653,3 +681,27 @@ class ContourExtraction:
             content = content + str(x[i]) + " " + str(y[i]) + "\n"
             i += 1
         return content
+    
+        
+    def helpDiaRange(self, sender=None, app_data=None):
+        dpg.set_value('extraTab_helpText', 'User can check the coordinate shown in the bottom right corner to estimate the diameter [px] of calibration dots.')
+        dpg.configure_item('extraTab_help', show=True)
+        
+    def helpRemovePts(self, sender=None, app_data=None):
+        dpg.set_value('extraTab_helpText', '1. User can remove wrong points by selecting the region on the image using middle mouse button. \n\n2. To improve the number of identified points, user can go back to Filtering tab and mask out noisy area, or go back to Thresholding tab to adjust the threshold.')
+        dpg.configure_item('extraTab_help', show=True)
+    
+    def helpAxisIndex(self, sender=None, app_data=None):
+        dpg.set_value('extraTab_helpText', 'User can choose any reference point as index (0,0). Then count the index of axis in the direction of world coordinate.')
+        dpg.configure_item('extraTab_help', show=True)
+        
+    def helpSelectCorners(self, sender=None, app_data=None):
+        dpg.set_value('extraTab_helpText', '1. Four corners are used for identifying the surrounding axes, so they have to be on the same row or column. \n\n2. User can select the four corners of the calibration dots using left mouse button. \n\n3. The order of selection is Bottom Left, Top Left, Top Right, Bottom Right.')
+        dpg.configure_item('extraTab_help', show=True)
+        
+    def helpAxisThreshold(self, sender=None, app_data=None):
+        dpg.set_value('extraTab_helpText', 'User can adjust the threshold to find the identified points on each axis.')     
+        dpg.configure_item('extraTab_help', show=True)
+        
+    
+        

@@ -172,7 +172,9 @@ class PolyCalib:
             
         dpg.configure_item("exportPolyCalib", show=False)
         
-        
+    
+    def helpImport(self, sender = None, app_data = None):
+        dpg.set_value('polyCalib_helpText', '1. Multiple csv format files with calibration points info can be imported. \n\n2. The calibration points in each file do not need to be in the same plane. \n\n3. Calibration points in different files must be in the same coordinate system.')
         
         
 

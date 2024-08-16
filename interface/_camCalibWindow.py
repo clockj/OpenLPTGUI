@@ -14,8 +14,10 @@ def showOpenCVCalib(callbacks):
             
             dpg.add_text('OpenCV Camera Calibration')
             dpg.add_separator()
-                      
-            dpg.add_text('1. Calibrate Camera Parameters')
+            
+            with dpg.group(horizontal=True):      
+                dpg.add_text('1. Calibrate Camera Parameters')
+                dpg.add_button(label='?', callback=callbacks.opencvCalib.helpCalibCam)
             dpg.add_text('(Distortion Coeffictions & Camera Matrix)')
             dpg.add_button(tag='import_OpencvCalibCam', label='Import Files', callback=lambda: dpg.show_item("file_dialog_opencvCamCalib"))
             
@@ -29,7 +31,9 @@ def showOpenCVCalib(callbacks):
             dpg.add_checkbox(label='Fix Aspect Ratio', tag='fixAspectRatio', default_value=True)
             dpg.add_checkbox(label='Fix Principal Point', tag='fixPrincipalPoint', default_value=True)
             
-            dpg.add_text('Select a distortion model')
+            with dpg.group(horizontal=True):
+                dpg.add_text('Select a distortion model:')
+                dpg.add_button(label='?', callback=callbacks.opencvCalib.helpDistModel)
             dpg.add_listbox(tag='distortionModel', items=['Zero', 'Radial: 2nd', 'Full'], default_value='Zero')
             
             dpg.add_text('Select the axis pointing towards the camera:')
@@ -39,16 +43,18 @@ def showOpenCVCalib(callbacks):
                     
             with dpg.group(tag='OpenCV Calibrate Pose Parameters', show=False):
                 dpg.add_separator()
-                dpg.add_text('2. Calibrate Pose Parameters')
-                
+                with dpg.group(horizontal=True):
+                    dpg.add_text('2. Calibrate Pose Parameters')
+                    dpg.add_button(label='?', callback=callbacks.opencvCalib.helpCalibPose)
+                dpg.add_text('(Rotation & Translation Vectors)')
                 with dpg.file_dialog(directory_selector=False, width=0.7*subwindow_width, height=0.9*subwindow_height, min_size=[400,300], show=False, file_count=20, tag='file_dialog_opencvPoseCalib', callback=callbacks.opencvCalib.openPoseCalibFile, cancel_callback=callbacks.opencvCalib.cancelPoseCalibImportFile):
                     dpg.add_file_extension("", color=(150, 255, 150, 255))
                     dpg.add_file_extension(".csv", color=(0, 255, 255, 255))
                     dpg.add_file_extension(".txt", color=(0, 255, 255, 255))
                 
                 dpg.add_button(tag='import_OpencvCalibPose', label='Import Files', callback=lambda: dpg.show_item("file_dialog_opencvPoseCalib"))
-                dpg.add_text('Select an optimization method')
-                dpg.add_listbox(tag='opencvPoseOptMethod', items=['SOLVEPNP_ITERATIVE', 'SOLVEPNP_EPNP', 'SOLVEPNP_IPPE','SOLVEPNP_SQPNP'])
+                # dpg.add_text('Select an optimization method')
+                # dpg.add_listbox(tag='opencvPoseOptMethod', items=['SOLVEPNP_ITERATIVE', 'SOLVEPNP_EPNP', 'SOLVEPNP_IPPE','SOLVEPNP_SQPNP'])
                 dpg.add_button(tag='calibrate_OpencvCalibPose', label='Run Calibration', callback=callbacks.opencvCalib.calibratePose)
                 dpg.add_separator()
             
@@ -58,7 +64,7 @@ def showOpenCVCalib(callbacks):
                 dpg.add_separator() 
                         
             with dpg.window(label="Save Files", modal=False, show=False, tag="exportOpencvCalib", no_title_bar=False, width=0.5*subwindow_width, height=0.5*subwindow_height, min_size=[600,255]):
-                dpg.add_text("Name your file")
+                dpg.add_text("Name your file (use same prefix ending with number for different cameras)")
                 dpg.add_input_text(tag='inputOpencvCalibFileText')
                 dpg.add_separator()
                 dpg.add_text("You MUST enter a File Name to select a directory")
@@ -82,6 +88,12 @@ def showOpenCVCalib(callbacks):
                 dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("errorOpencvCalib", show=False))
             
             
+            # help window shown in the middle
+            with dpg.window(label="Help!", modal=True, show=False, tag="opencv_help", no_title_bar=False, width=0.3*subwindow_width, height=0.3*subwindow_height, pos=[0.35*subwindow_width,0.35*subwindow_height]):
+                dpg.add_text("", tag="opencv_helpText", wrap=0.295*subwindow_width)
+                dpg.add_text("")
+                dpg.add_separator()
+                dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("opencv_help", show=False))
         
         
         with dpg.child_window(tag='opencvOutputParent'):
@@ -102,7 +114,7 @@ def showOpenCVCalib(callbacks):
                 dpg.add_table_column(label='File Path', width_fixed=False, width=-1)
             
             with dpg.group(show=False, tag='opencvCalibGroup'):
-                dpg.add_text('Camera Calibration Error:', tag='opencvCamcalibErr') 
+                dpg.add_text('Camera Calibration Error:', tag='opencvCamcalibErr', color=(255,255,0,255)) 
                 dpg.add_text('Camera Matrix:')
                 dpg.add_text('', tag='opencvCamMat')
                 dpg.add_text('Distortion Coefficients: (k1,k2,p1,p2,k3)')
@@ -117,7 +129,7 @@ def showOpenCVCalib(callbacks):
                         dpg.add_table_column(label='File Name', width_fixed=False)
                         dpg.add_table_column(label='File Path', width_fixed=False, width=-1)
                 
-                dpg.add_text('Pose Calibraion Error:', tag='opencvPosecalibErr')
+                dpg.add_text('Pose Calibraion Error:', tag='opencvPosecalibErr', color=(255,255,0,255))
                 dpg.add_text('Rotation Matrix:')
                 dpg.add_text('', tag='opencvRotMat')
                 dpg.add_text('Rotation Vector:')

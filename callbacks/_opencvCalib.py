@@ -115,7 +115,8 @@ class OpencvCalib:
         posecalibPt3D_cor = (self.posecalibPt3D.reshape(-1,3) @ self.corMat.T).reshape(-1,1,3).astype(np.float32)
         
         # Get optimization method
-        optMethod = dpg.get_value('opencvPoseOptMethod')
+        # optMethod = dpg.get_value('opencvPoseOptMethod')
+        optMethod = 'SOLVEPNP_ITERATIVE'
         optFlag = cv2.SOLVEPNP_ITERATIVE
         if optMethod == 'SOLVEPNP_EPNP':
             optFlag = cv2.SOLVEPNP_EPNP
@@ -303,4 +304,15 @@ class OpencvCalib:
         dpg.configure_item("exportOpencvCalib", show=False)
 
     
+    def helpCalibCam(self, sender=None, app_data=None):
+        dpg.set_value('opencv_helpText', '1. Multiple csv format files with calibration points info can be imported. \n\n2. The calibration points in each file must be in the same plane. \n\n3. Calibration points in different files need not to be in the same coordinate system but in different view angles.')
+        dpg.configure_item('opencv_help', show=True)
     
+    def helpDistModel(self, sender=None, app_data=None):
+        dpg.set_value('opencv_helpText', '1. '"'Zero'"': no distortion. \n\n2. '"'Radial: 2nd'"': only radial distortion with 2nd order. \n\n3. '"'Full'"': all five distortion parameters are taken into account.')
+        dpg.configure_item('opencv_help', show=True)
+        
+    def helpCalibPose(self, sender=None, app_data=None):
+        dpg.set_value('opencv_helpText', '1. Multiple csv format files with calibration points info can be imported. \n\n2. The calibration points in each file do not need to be in the same plane. \n\n3. Calibration points in different files must be in the same coordinate.')
+        dpg.configure_item('opencv_help', show=True)
+        

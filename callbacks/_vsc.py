@@ -48,20 +48,27 @@ class Vsc:
         
         self.goodTracksThreshold = dpg.get_value('inputVscGoodTracksThreshold')
         
-        # select good tracks 
-        dpg.set_value('vscStatus', 'Status: Selecting good tracks!')
+        # init
+        dpg.set_value('vscStatus', 'Status: Start!')
+        dpg.set_value('vscStatus_goodTracks', 'Selecting good tracks: --')
+        dpg.set_value('vscStatus_particles', 'Selecting particles: --')
+        dpg.set_value('vscStatus_particleInfo', 'Extracting particle info: --')
+        dpg.set_value('vscStatus_optimize', 'Optimizing: --')
+        
+        # select good tracks
         self.selectGoodTracks()
+        dpg.set_value('vscStatus_goodTracks', 'Selecting good tracks: Finish!')
         # only for debug 
         # self.tracks = pd.read_csv(self.camFilePath[0].replace(self.camFileName[0],'goodTracks.csv'))
         
         # select particles 
-        dpg.set_value('vscStatus', 'Status: Selecting particles!')
         nParticles = dpg.get_value('inputVscNumParticles')
         goodParticles = self.selectParticles(nParticles)
+        dpg.set_value('vscStatus_particles', 'Selecting particles: Finish!')
         
         # get particle info: (WorldX, WorldY, WorldZ, Cam1ImgX, Cam1ImgY, ...)
-        dpg.set_value('vscStatus', 'Status: Extracting particle info!')
         self.getParticleInfo(goodParticles)
+        dpg.set_value('vscStatus_particleInfo', 'Extracting particle info: Finish!')
         # only for debug, generate debug dataset
         # npts = 4000
         # np.random.seed(0)
@@ -75,8 +82,8 @@ class Vsc:
         
         
         # optimize pose parameters 
-        dpg.set_value('vscStatus', 'Status: Optimizing!')
         self.optCalib()
+        dpg.set_value('vscStatus_optimize', 'Optimizing: Finish!')
         dpg.set_value('vscStatus', 'Status: Finish!')
         
     def selectGoodTracks(self):
@@ -286,7 +293,8 @@ class Vsc:
         print('Time: ', t_end-t_start)
         
         dpg.configure_item('vscPlotButton_loss', show=True)
-        dpg.configure_item('vscPlotButton_selectedParticles', show=True)            
+        dpg.configure_item('vscPlotButton_selectedParticles', show=True)     
+        dpg.configure_item('vscPlotButton_errhist', show=True)       
         dpg.configure_item('vscExportParent', show=True)
         
         print('Finish optimization!')
@@ -434,7 +442,41 @@ class Vsc:
         plt.savefig(self.camFilePath[0].replace(self.camFileName[0],'particles.png'), dpi=600)
         plt.close()
         Texture.createTexture('vscPlot', cv2.imread(self.camFilePath[0].replace(self.camFileName[0],'particles.png')))
-    
+        
+    def plotErrorHistogram(self, sender=None, app_data=None):
+        npts = len(self.pt2d_list_lpt[0])
+        
+        # calculate original error distribution 
+        line_list_all = []
+        for i in range(self.nCam):
+            line_list = self.cam[i].lineOfSight(self.pt2d_list_lpt[i])
+            line_list_all.append(line_list)
+        # triangulation
+        sight_list_all = [[line_list_all[j][i] for j in range(self.nCam)] for i in range(npts)]
+        _, err_orig = lpt.math.triangulation(sight_list_all)
+        
+        # calculate optimized error distribution
+        line_list_all = []
+        for i in range(self.nCam):
+            line_list = self.cam_update[i].lineOfSight(self.pt2d_list_lpt[i])
+            line_list_all.append(line_list)
+        # triangulation
+        sight_list_all = [[line_list_all[j][i] for j in range(self.nCam)] for i in range(npts)]
+        _, err_opt = lpt.math.triangulation(sight_list_all)
+        
+        # plot histogram
+        plt.figure()
+        plt.hist(err_orig, bins=50, alpha=0.5, label='Before Optimization')
+        plt.hist(err_opt, bins=50, alpha=0.5, label='After Optimization')
+        plt.xlabel('Error')
+        plt.ylabel('Number')
+        plt.legend()
+        plt.title('Error Distribution')
+        plt.tight_layout()
+        plt.savefig(self.camFilePath[0].replace(self.camFileName[0],'errorPDF.png'), dpi=600)
+        plt.close()
+        
+        Texture.createTexture('vscPlot', cv2.imread(self.camFilePath[0].replace(self.camFileName[0],'errorPDF.png')))
     
     # File IO
     def cancelCamImportFile(self, sender=None, app_data=None):

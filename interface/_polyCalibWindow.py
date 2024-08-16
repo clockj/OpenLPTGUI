@@ -15,7 +15,9 @@ def showPolyCalib(callbacks):
             dpg.add_text('Polynomial Camera Calibration')
             dpg.add_separator()
             
-            dpg.add_button(tag='import_polyCalib', label='Import Files', callback=lambda: dpg.show_item("file_dialog_polyCalib"))
+            with dpg.group(horizontal=True):
+                dpg.add_button(tag='import_polyCalib', label='Import Files', callback=lambda: dpg.show_item("file_dialog_polyCalib"))
+                dpg.add_button(label='?', callback=callbacks.polyCalib.helpImport)
             
             with dpg.group(horizontal=True):
                 dpg.add_text('Image Width')
@@ -29,7 +31,6 @@ def showPolyCalib(callbacks):
                 dpg.add_input_int(tag='inputPolyOrder', default_value=3)
             
             dpg.add_button(tag='calibrate_polyCalib', label='Run Calibration', callback=callbacks.polyCalib.calibrateCamera)
-           
             dpg.add_separator()
             
             with dpg.group(tag='polyRefPlane', show=False):
@@ -37,18 +38,19 @@ def showPolyCalib(callbacks):
                 dpg.add_text('(for line of sight calculation)')
                 dpg.add_listbox(items=['REF_X','REF_Y','REF_Z'], width=-1, default_value='REF_Z', tag='selectXYZ')
                 
-                with dpg.group(horizontal=True):
+                with dpg.group(horizontal=True, width=0.1*subwindow_width):
                     dpg.add_text('Loaction 1: ')
-                    dpg.add_input_float(tag='inputPolyRefPlane_1', default_value=0.0, step=-1)
-                with dpg.group(horizontal=True):
+                    dpg.add_input_float(tag='inputPolyRefPlane_1', default_value=0.0, step=-1, label='in physical unit')
+                with dpg.group(horizontal=True, width=0.1*subwindow_width):
                     dpg.add_text('Loaction 2: ')
-                    dpg.add_input_float(tag='inputPolyRefPlane_2', default_value=5, step=-1)
-            
-            dpg.add_separator()
+                    dpg.add_input_float(tag='inputPolyRefPlane_2', default_value=5, step=-1, label='in physical unit')
+                dpg.add_separator()
+                
             dpg.add_button(tag="buttonExportPolyCalib",label='Export Coefficients', callback=lambda: dpg.show_item("exportPolyCalib"), show=False)
+            dpg.add_separator()
             
             with dpg.window(label="Save Files", modal=False, show=False, tag="exportPolyCalib", no_title_bar=False, width=0.5*subwindow_width, height=0.5*subwindow_height, min_size=[600,255]):
-                dpg.add_text("Name your file")
+                dpg.add_text("Name your file (use same prefix ending with number for different cameras)")
                 dpg.add_input_text(tag='inputPolyCalibFileText')
                 dpg.add_separator()
                 dpg.add_text("You MUST enter a File Name to select a directory")
@@ -69,7 +71,15 @@ def showPolyCalib(callbacks):
             with dpg.window(label="ERROR! Select a data file!", modal=True, show=False, tag="noPolyPath", no_title_bar=False):
                 dpg.add_text("ERROR: This is not a valid path.")
                 dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("noPolyPath", show=False))
-            dpg.add_separator()
+            
+            
+            # help window shown in the middle
+            with dpg.window(label="Help!", modal=True, show=False, tag="polyCalib_help", no_title_bar=False, width=0.3*subwindow_width, height=0.3*subwindow_height, pos=[0.35*subwindow_width,0.35*subwindow_height]):
+                dpg.add_text("", tag="polyCalib_helpText", wrap=0.295*subwindow_width)
+                dpg.add_text("")
+                dpg.add_separator()
+                dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("polyCalib_help", show=False))
+            
         
         with dpg.child_window(tag='polyOutputParent'):
             with dpg.plot(tag="polyPlotParent", label="Calibration Points", height=-1, width=-1):
@@ -89,7 +99,7 @@ def showPolyCalib(callbacks):
                 dpg.add_table_column(label='File Path', width_fixed=True)
             
             with dpg.group(show=False, tag='polyCalibGroup'):
-                dpg.add_text('Calibration Error:', tag='polyCalibErr') 
+                dpg.add_text('Calibration Error:', tag='polyCalibErr', color=(255,255,0,255)) 
                 
                 dpg.add_text('Calibration Results: (coeff,x_order,y_order,z_order)')
                 dpg.add_text('', tag='polyCalibResults')

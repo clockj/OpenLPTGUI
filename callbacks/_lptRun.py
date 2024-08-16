@@ -20,7 +20,6 @@ class LptRun:
         self.camFilePath = [] 
         self.camFileName = []
         self.nCam = None
-        self.mainParams = {}
         
         self.imgFilePath = []
         self.imgFileName = []
@@ -33,8 +32,12 @@ class LptRun:
         
         self.exportFolder = None
         
-        # run openlpt 
+        # run openlpt
         self.mainConfigFile = None
+        self.mainParams = {} 
+        self.cam_list = None
+        self.imgio_list = []
+        self.stb_list = []
         
         # post-processing 
         self.tracksFilePath = []
@@ -413,20 +416,32 @@ class LptRun:
         mainParams['nDigit'] = len(bin(int(content[line_id].split(',')[1])))-2
         
         camFilePath = []
+        cam = []
+        intensity_max = []
+        useid_list = list(range(self.nCam))
         for _ in range(self.nCam):
             camFilePath.append(content[line_id].split(',')[0])
+            cam.append(lpt.math.Camera(camFilePath[-1]))
+            intensity_max.append(int(content[line_id].split(',')[1]))
             line_id += 1 
         line_id -= 1
+        self.cam_list = lpt.math.CamList()
+        self.cam_list.cam_list = cam
+        self.cam_list.intensity_max = intensity_max
+        self.cam_list.useid_list = useid_list
         
         line_id += 1
         imgFilePath = []
+        self.imgio_list = []
         for _ in range(self.nCam):
             imgFilePath.append(content[line_id])
+            self.imgio_list.append(lpt.math.ImageIO('', content[line_id]))
             line_id += 1
         line_id -= 1
         
         line_id += 1
         mainParams['viewVolume'] = list(map(float, content[line_id].split(',')))
+        axis_limit = lpt.AxisLimit(mainParams['viewVolume'][0], mainParams['viewVolume'][1], mainParams['viewVolume'][2], mainParams['viewVolume'][3], mainParams['viewVolume'][4], mainParams['viewVolume'][5])
         
         line_id += 1
         mainParams['voxelToMM'] = float(content[line_id])
@@ -438,7 +453,26 @@ class LptRun:
         mainParams['objectTypes'] = content[line_id].split(',')
         n_obj = len(mainParams['objectTypes'])
         
-        line_id += 2
+        mainParams['stbPaths'] = [content[i] for i in range(line_id+1, line_id+1+n_obj)]
+        print(mainParams['stbPaths'])
+        
+        self.stb_list = []
+        for i in range(n_obj):
+            if mainParams['objectTypes'][i] == 'Tracer':
+                self.stb_list.append(lpt.stb.STBTracer(
+                        mainParams['frameRange'][0], 
+                        mainParams['frameRange'][1], 
+                        1, 
+                        mainParams['voxelToMM'], 
+                        mainParams['nThread'], 
+                        mainParams['resultFolder']+'Tracer_'+str(i)+os.path.sep, 
+                        self.cam_list, 
+                        axis_limit, 
+                        mainParams['stbPaths'][i]
+                    )
+                )
+        
+        line_id += 1 + n_obj
         mainParams['isLoadTracks'] = 0
         if line_id < len(content):
             mainParams['isLoadTracks'], mainParams['prevFrameID'] = map(int, content[line_id].split(','))
@@ -457,8 +491,7 @@ class LptRun:
         self.mainParams = mainParams.copy()
         self.camFilePath = camFilePath.copy()
         self.imgFilePath = imgFilePath.copy()
-        
-    
+      
     def openMainConfig(self, sender=None, app_data=None):
         self.mainConfigFile = app_data['file_path_name']
         if self.mainConfigFile is None:
@@ -469,14 +502,59 @@ class LptRun:
         self.loadMainConfig(self.mainConfigFile)
         
         dpg.configure_item('lptRun_Run_runButton', show=True)
-        
         dpg.set_value('lptRun_Run_mainConfigStatus', 'Status: Finish!')
         dpg.set_value('lptRun_Run_processStatus', 'Status: Ready!')
+        
+        # config items for step 2. 
+        n_obj = len(self.mainParams['objectTypes'])
+        dpg.configure_item('lptRun_Run_objFinder_objType_input', items=[self.mainParams['objectTypes'][i]+'_'+str(i) for i in range(n_obj)])
+        dpg.configure_item('lptRun_Run_objFinder_cam_input', items=[f'cam{i+1}' for i in range(self.nCam)])
+        dpg.set_value('lptRun_Run_objFinder_frameID_text', 'Enter frame ID ('+str(self.mainParams['frameRange'][0])+'~'+str(self.mainParams['frameRange'][1])+')')
+        dpg.configure_item('lptRun_Run_objFinder_frameID_input', default_value=self.mainParams['frameRange'][0], max_value=self.mainParams['frameRange'][1], max_clamped=True, min_clamped=True)
         
         # print outputs onto the output window
         dpg.set_value('lptRun_Run_mainConfigFile', 'Main Config File: ' + self.mainConfigFile)
         dpg.set_value('lptRun_Run_resultFolder', 'Result Folder: ' + self.mainParams['resultFolder'])
+        self.updateImage()
+    
+    def updateImage(self, sender=None, app_data=None):
+        cam_id = int(dpg.get_value('lptRun_Run_objFinder_cam_input').replace('cam',''))-1
+        frame_id = dpg.get_value('lptRun_Run_objFinder_frameID_input')
+        img = lpt.math.matrix_to_numpy(self.imgio_list[cam_id].loadImg(frame_id)).astype('uint'+str(self.mainParams['nDigit']))
+        Texture.createTexture('lptRun_Run_Plot', np.flipud(img))
+    
+    def draw_plus(self, image, center, color=(0, 0, 255), size=5, thickness=1):
+        cx, cy = center
+        cv2.line(image, (cx - size, cy), (cx + size, cy), color, thickness)
+        cv2.line(image, (cx, cy - size), (cx, cy + size), color, thickness)
+    
+    def checkObjFinder(self, sender=None, app_data=None):
+        objectTypeInput = dpg.get_value('lptRun_Run_objFinder_objType_input')
+        cam_id = int(dpg.get_value('lptRun_Run_objFinder_cam_input').replace('cam',''))-1
+        frame_id = dpg.get_value('lptRun_Run_objFinder_frameID_input')
         
+        img = self.imgio_list[cam_id].loadImg(frame_id)
+        obj2d_list = []
+        
+        objectType, obj_id = objectTypeInput.split('_')
+        obj_id = int(obj_id)
+        if objectType == 'Tracer':
+            # run tracer identification 
+            obj_params = self.stb_list[obj_id].getObjParam()
+            obj2d_list = lpt.object.ObjectFinder2D().findTracer2D(img, obj_params)
+        else:
+            dpg.configure_item('lptRun_Run_noPath', show=True)
+            dpg.set_value('lptRun_Run_noPathText', 'Object type: '+objectType+' is not found!')
+            return
+        
+        # update image 
+        img = lpt.math.matrix_to_numpy(img).astype('uint'+str(self.mainParams['nDigit']))
+        img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+        for obj2d in obj2d_list:
+            cv2.circle(img, (int(round(obj2d._pt_center[0])), int(round(obj2d._pt_center[1]))), 1, (0,0,255), 1)
+            # self.draw_plus(img, (int(round(obj2d._pt_center[0])), int(round(obj2d._pt_center[1]))))
+        Texture.createTexture('lptRun_Run_Plot', np.flipud(img))
+       
     def runOpenLPT(self, sender=None, app_data=None):      
         # run openlpt
         lpt.run(self.mainConfigFile)
@@ -599,7 +677,10 @@ class LptRun:
         
         Texture.createTexture('lptRun_Post_Plot', cv2.imread(os.path.join(self.plotFolder, 'trackLength.png')))
         
-        
+    
+    def helpObjFinder(self, sender=None, app_data=None):
+        dpg.set_value('lptRun_Run_helpText', 'Check the quality of object identification. \n\n1. If lots of noisy points exist, try to increase the object finder threshold or improve image quality in the pre-processing step. \n\n2. If objects cannot be correctly identified, please try to adjust the object parameters.')
+        dpg.configure_item('lptRun_Run_help', show=True)
         
         
     

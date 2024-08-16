@@ -17,7 +17,9 @@ def showCreateImgFile(callbacks):
             with dpg.file_dialog(directory_selector=True, width=0.7*subwindow_width, height=0.9*subwindow_height, min_size=[400,300], file_count=20, show=False, tag='file_dialog_createImgfile', callback=callbacks.lptCreateImgFile.openFolder, cancel_callback=callbacks.lptCreateImgFile.cancelImportFolder):
                 dpg.add_file_extension("", color=(150, 255, 150, 255))
 
-            dpg.add_text('1. Select Image Main Folder')
+            with dpg.group(horizontal=True):
+                dpg.add_text('1. Select Image Main Folder')
+                dpg.add_button(label='?', callback=callbacks.lptCreateImgFile.helpSelectFolder)
             dpg.add_button(label='Select', callback=lambda: dpg.show_item("file_dialog_createImgfile"))
             dpg.add_separator()
             
@@ -33,6 +35,19 @@ def showCreateImgFile(callbacks):
             dpg.add_button(label='Select Output Folder', callback=lambda: dpg.show_item("lptImgFileOutputDialog"))
             dpg.add_button(label='Save', callback=callbacks.lptCreateImgFile.createImgFiles)
             dpg.add_separator()
+            
+            
+            # error message
+            with dpg.window(label="ERROR!", modal=True, show=False, tag="lptImgProcessCreate_noPath", no_title_bar=False):
+                dpg.add_text("", tag="lptImgProcessCreate_noPathText")
+                dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("lptImgProcessCreate_noPath", show=False))
+            
+            # help window shown in the middle
+            with dpg.window(label="Help!", modal=True, show=False, tag="lptImgProcessCreate_help", no_title_bar=False, width=0.3*subwindow_width, height=0.3*subwindow_height, pos=[0.35*subwindow_width,0.35*subwindow_height]):
+                dpg.add_text("", tag="lptImgProcessCreate_helpText", wrap=0.295*subwindow_width)
+                dpg.add_text("")
+                dpg.add_separator()
+                dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("lptImgProcessCreate_help", show=False))
             
                   
         with dpg.child_window(horizontal_scrollbar=True):
@@ -58,7 +73,9 @@ def showActualImgProcess(callbacks):
                 dpg.add_file_extension("", color=(150, 255, 150, 255))
                 dpg.add_file_extension(".txt", color=(0, 255, 255, 255))
 
-            dpg.add_text('1. Import Image Files')
+            with dpg.group(horizontal=True):
+                dpg.add_text('1. Import Image Path Files')
+                dpg.add_button(label='?', callback=callbacks.lptImgProcess.helpImportImgFile)
             dpg.add_button(label='Import Files', callback=lambda: dpg.show_item("file_dialog_imgprocess"))
             dpg.add_separator()
             
@@ -100,7 +117,7 @@ def showActualImgProcess(callbacks):
             
             with dpg.group(horizontal=True):
                 dpg.add_checkbox(tag='lptLabvisionCheckbox', callback=lambda sender, app_data: callbacks.lptImgProcess.toggleAndExecuteQuery('labvision', sender, app_data))
-                dpg.add_text('Labvision Process')
+                dpg.add_text('Sharpening Particle')
             dpg.add_text('Gaussian Smooth Std')
             dpg.add_slider_float(tag='lptGaussianBlurSlider', default_value=0.5, min_value=0, max_value=5, width=-1, callback=lambda: callbacks.lptImgProcess.executeQuery('labvision'))
             dpg.add_text('Mean Filter Size')
@@ -119,8 +136,19 @@ def showActualImgProcess(callbacks):
             dpg.add_button(label='Run Batch', callback=callbacks.lptImgProcess.runBatch)       
             dpg.add_text('Status: --', tag='lptImgExportStatus')
             
-            with dpg.window(tag='noLptImgPath', show=False):
-                dpg.add_text('File path is wrong!')
+            
+            # error message 
+            with dpg.window(label="ERROR!", modal=True, show=False, tag="noLptImgPath", no_title_bar=False):
+                dpg.add_text("", tag="noLptImgPathText")
+                dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("noLptImgPath", show=False))
+                
+            
+            # help window shown in the middle
+            with dpg.window(label="Help!", modal=True, show=False, tag="lptImgProcess_help", no_title_bar=False, width=0.3*subwindow_width, height=0.3*subwindow_height, pos=[0.35*subwindow_width,0.35*subwindow_height]):
+                dpg.add_text("", tag="lptImgProcess_helpText", wrap=0.295*subwindow_width)
+                dpg.add_text("")
+                dpg.add_separator()
+                dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("lptImgProcess_help", show=False))
         
         
         with dpg.child_window(horizontal_scrollbar=True):
