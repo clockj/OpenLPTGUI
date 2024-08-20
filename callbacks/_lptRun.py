@@ -678,10 +678,13 @@ class LptRun:
         Texture.createTexture('lptRun_Post_Plot', cv2.imread(os.path.join(self.plotFolder, 'trackLength.png')))
         
     
+    def helpVoxToMM(self, sender=None, app_data=None):
+        dpg.set_value('lptRun_helpText', 'Voxel is a 3D definition of pixel, which is used to quantified the uncertainty of 3D distance. \n\n1. Voxel to physical unit ratio is the ratio between the voxel size and the real world size. \n\n2. The number of voxels can be chosen as a similar number to camera resolution. For example, we can use 1000x1000x1000 voxels for camera resolution as 1024x1024. \n\n3. The voxel to physical unit ratio (voxel size) is determined by the camera resolution and the view volume. If the camera resolution is 1024x1024 and the view volume is [-20,20]x[-20,20]x[-20,20], this value could be set as 40/1000=0.04.')
+        dpg.configure_item('lptRun_help', show=True)
+    
     def helpObjFinder(self, sender=None, app_data=None):
         dpg.set_value('lptRun_Run_helpText', 'Check the quality of object identification. \n\n1. If lots of noisy points exist, try to increase the object finder threshold or improve image quality in the pre-processing step. \n\n2. If objects cannot be correctly identified, please try to adjust the object parameters.')
-        dpg.configure_item('lptRun_Run_help', show=True)
-        
+        dpg.configure_item('lptRun_Run_help', show=True) 
         
     
     

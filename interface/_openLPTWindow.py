@@ -62,15 +62,17 @@ def showConfig(callbacks):
                 dpg.add_text('2. Enter number of threads for parallel processing')
                 dpg.add_input_int(tag='lptRun_nThread_input', default_value=6, min_clamped=True, min_value=0, width=0.3*subwindow_width)
                 
-                dpg.add_text('3. Enter number of digits of image')
+                dpg.add_text('3. Enter number of bits of image')
                 dpg.add_input_int(tag='lptRun_nDigit_input', default_value=8, min_clamped=True, min_value=8, width=0.3*subwindow_width)
                 
                 dpg.add_text('4. Enter view volume range [physical unit]:')
                 dpg.add_input_floatx(tag='lptRun_viewVolume_x_input', label='(x_min,x_max)', width=0.3*subwindow_width, default_value=[-20, 20], size=2)
                 dpg.add_input_floatx(tag='lptRun_viewVolume_y_input', label='(y_min,y_max)', width=0.3*subwindow_width, default_value=[-20, 20], size=2)
                 dpg.add_input_floatx(tag='lptRun_viewVolume_z_input', label='(z_min,z_max)', width=0.3*subwindow_width, default_value=[-20, 20], size=2)
-            
-                dpg.add_text('5. Enter voxel to mm ratio:')
+
+                with dpg.group(horizontal=True):
+                    dpg.add_text('5. Enter voxel to physical unit ratio:')
+                    dpg.add_button(label='?', callback=callbacks.lptRun.helpVoxToMM)
                 dpg.add_text('e.g. if use 1000^3 voxel, ratio = (xmax-xmin)/1000')
                 dpg.add_input_float(tag='lptRun_voxelToMM_input', default_value=0.04)
                 
@@ -144,6 +146,13 @@ def showConfig(callbacks):
             with dpg.window(label="ERROR!", modal=True, show=False, tag="lptRun_noPath", no_title_bar=False):
                 dpg.add_text("", tag="lptRun_noPathText")
                 dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("lptRun_noPath", show=False))
+                
+            # help window 
+            with dpg.window(label="Help!", modal=True, show=False, tag="lptRun_help", no_title_bar=False, width=0.3*subwindow_width, height=0.3*subwindow_height, pos=[0.35*subwindow_width,0.35*subwindow_height], horizontal_scrollbar=True):
+                dpg.add_text("", tag="lptRun_helpText", wrap=0.295*subwindow_width)
+                dpg.add_text("")
+                dpg.add_separator()
+                dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("lptRun_help", show=False))
             
         
         with dpg.child_window(tag='lptRun_outputParent', horizontal_scrollbar=True):
