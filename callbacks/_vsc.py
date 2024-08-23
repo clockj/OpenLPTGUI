@@ -306,35 +306,34 @@ class Vsc:
         id = 0
         line_list_all = []
         for i in range(self.nCam):
-            if self.isCamFix[i]:
-                continue
-            if self.cam_update[i]._type == lpt.math.CameraType.PINHOLE:
-                rotVec = np.array(x[id:id+3])
-                transVec = np.array(x[id+3:id+6]).reshape(3,1)
-                rotMat = cv2.Rodrigues(rotVec)[0]
-                rotMatInv = np.linalg.inv(rotMat)
-                transVecInv = - rotMatInv @ transVec
-                
-                self.cam_update[i]._pinhole_param.r_mtx = lpt.math.numpy_to_matrix(cv2.Rodrigues(rotVec)[0])
-                self.cam_update[i]._pinhole_param.t_vec = lpt.math.Pt3D(transVec[0,0], transVec[1,0], transVec[2,0])
-                self.cam_update[i]._pinhole_param.r_mtx_inv = lpt.math.numpy_to_matrix(rotMatInv)
-                self.cam_update[i]._pinhole_param.t_vec_inv = lpt.math.Pt3D(transVecInv[0,0], transVecInv[1,0], transVecInv[2,0])
-                
-                id += 6
-                
-            elif self.cam_update[i]._type == lpt.math.CameraType.POLYNOMIAL:
-                u_coeffs = lpt.math.matrix_to_numpy(self.cam_update[i]._poly_param.u_coeffs)
-                v_coeffs = lpt.math.matrix_to_numpy(self.cam_update[i]._poly_param.v_coeffs)
-                n_coeff = self.cam_update[i]._poly_param.n_coeff
-                
-                u_coeffs[:,0] = x[id:id+n_coeff]
-                v_coeffs[:,0] = x[id+n_coeff:id+n_coeff*2]
-                
-                self.cam_update[i]._poly_param.u_coeffs = lpt.math.numpy_to_matrix(u_coeffs)
-                self.cam_update[i]._poly_param.v_coeffs = lpt.math.numpy_to_matrix(v_coeffs)
-                self.cam_update[i].updatePolyDuDv()
-                
-                id += n_coeff * 2
+            if not self.isCamFix[i]:
+                if self.cam_update[i]._type == lpt.math.CameraType.PINHOLE:
+                    rotVec = np.array(x[id:id+3])
+                    transVec = np.array(x[id+3:id+6]).reshape(3,1)
+                    rotMat = cv2.Rodrigues(rotVec)[0]
+                    rotMatInv = np.linalg.inv(rotMat)
+                    transVecInv = - rotMatInv @ transVec
+                    
+                    self.cam_update[i]._pinhole_param.r_mtx = lpt.math.numpy_to_matrix(cv2.Rodrigues(rotVec)[0])
+                    self.cam_update[i]._pinhole_param.t_vec = lpt.math.Pt3D(transVec[0,0], transVec[1,0], transVec[2,0])
+                    self.cam_update[i]._pinhole_param.r_mtx_inv = lpt.math.numpy_to_matrix(rotMatInv)
+                    self.cam_update[i]._pinhole_param.t_vec_inv = lpt.math.Pt3D(transVecInv[0,0], transVecInv[1,0], transVecInv[2,0])
+                    
+                    id += 6
+                    
+                elif self.cam_update[i]._type == lpt.math.CameraType.POLYNOMIAL:
+                    u_coeffs = lpt.math.matrix_to_numpy(self.cam_update[i]._poly_param.u_coeffs)
+                    v_coeffs = lpt.math.matrix_to_numpy(self.cam_update[i]._poly_param.v_coeffs)
+                    n_coeff = self.cam_update[i]._poly_param.n_coeff
+                    
+                    u_coeffs[:,0] = x[id:id+n_coeff]
+                    v_coeffs[:,0] = x[id+n_coeff:id+n_coeff*2]
+                    
+                    self.cam_update[i]._poly_param.u_coeffs = lpt.math.numpy_to_matrix(u_coeffs)
+                    self.cam_update[i]._poly_param.v_coeffs = lpt.math.numpy_to_matrix(v_coeffs)
+                    self.cam_update[i].updatePolyDuDv()
+                    
+                    id += n_coeff * 2
 
             line_list = self.cam_update[i].lineOfSight(self.pt2d_list_lpt[i])
             line_list_all.append(line_list)
