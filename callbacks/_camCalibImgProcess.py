@@ -17,6 +17,9 @@ class CamCalibImageProcess:
         self.height = None
         self.width = None
 
+        self.startPos = None
+        self.endPos = None
+        
         self.blocks = [
             {
                 'method': self.importImage,
@@ -534,10 +537,10 @@ class CamCalibImageProcess:
         for checkbox in checkboxes:
             dpg.set_value(checkbox, False)
         
-        
+            
     # help window 
     def helpMaskArea(self, sender=None, app_data=None):
-        dpg.set_value("filteringTab_helpText", "Select the area you want to remove by clicking and dragging the middle mouse button over the image.")
+        dpg.set_value("filteringTab_helpText", "Select the area you want to remove by dragging the left mouse button over the image.")
         dpg.configure_item("filteringTab_help", show=True)
     
     def helpRemoveNoise(self, sender=None, app_data=None):

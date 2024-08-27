@@ -149,7 +149,7 @@ def showContourExtraction(callbacks):
                 dpg.add_text("Missing file name or directory.", tag="exportSelectedContourError", show=False)
         
         with dpg.child_window(tag='ContourExtractionParent'):
-            with dpg.plot(tag="ContourExtractionPlotParent", label="ContourExtraction", height=-1, width=-1, query=True):
+            with dpg.plot(tag="ContourExtractionPlotParent", label="ContourExtraction", height=-1, width=-1, query=True, query_button=dpg.mvMouseButton_Left, pan_button=dpg.mvMouseButton_Middle):
                 dpg.add_plot_legend()
                 dpg.add_plot_axis(dpg.mvXAxis, label="x", tag="ContourExtraction_x_axis")
                 dpg.add_plot_axis(dpg.mvYAxis, label="y", tag="ContourExtraction_y_axis", invert=True)

@@ -74,8 +74,8 @@ def showFiltering(callbacks):
 
             
         with dpg.child_window(tag='FilteringParent'):
-            with dpg.plot(tag="FilteringPlotParent", label="Filtering", height=-1, width=-1, query=True):
+            with dpg.plot(tag="FilteringPlotParent", label="Filtering", height=-1, width=-1, query=True, query_button=dpg.mvMouseButton_Left, pan_button=dpg.mvMouseButton_Middle):
                 dpg.add_plot_legend()
                 dpg.add_plot_axis(dpg.mvXAxis, label="x", tag="Filtering_x_axis")
                 dpg.add_plot_axis(dpg.mvYAxis, label="y", tag="Filtering_y_axis", invert=True)
-            
+                            

@@ -688,7 +688,7 @@ class ContourExtraction:
         dpg.configure_item('extraTab_help', show=True)
         
     def helpRemovePts(self, sender=None, app_data=None):
-        dpg.set_value('extraTab_helpText', '1. User can remove wrong points by selecting the region on the image using middle mouse button. \n\n2. To improve the number of identified points, user can go back to Filtering tab and mask out noisy area, or go back to Thresholding tab to adjust the threshold.')
+        dpg.set_value('extraTab_helpText', '1. User can remove wrong points by selecting the region on the image (dragging the left mouse button). \n\n2. To improve the number of identified points, user can go back to Filtering tab and mask out noisy area, or go back to Thresholding tab to adjust the threshold.')
         dpg.configure_item('extraTab_help', show=True)
     
     def helpAxisIndex(self, sender=None, app_data=None):
