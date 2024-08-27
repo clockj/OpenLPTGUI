@@ -44,6 +44,8 @@ def showVSC(callbacks):
             dpg.add_input_int(tag='inputVscNumParticles', default_value=4000)
             dpg.add_text('Particle Radius: [pix]')
             dpg.add_input_int(tag='inputVscParticleRadius', default_value=4)
+            dpg.add_text('Particle intensity threshold: ')
+            dpg.add_input_int(tag='inputVscIntensityThreshold', default_value=60)
             dpg.add_text('Triangulation Threshold: [physical unit]')
             dpg.add_input_float(tag='inputVscTriangulationThreshold', default_value=2.5)
             dpg.add_text('Select fix cameras')

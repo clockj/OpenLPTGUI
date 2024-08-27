@@ -189,8 +189,9 @@ class Vsc:
         # particle info: (WorldX, WorldY, WorldZ, Cam1ImgX, Cam1ImgY, ...)
         searchR = dpg.get_value('inputVscParticleRadius') * 0.75
         errThreshold = dpg.get_value('inputVscTriangulationThreshold')
+        intThreshold = dpg.get_value('inputVscIntensityThreshold')
         
-        properties = [2.0**32-1, 35.0, 2.0]
+        properties = [2.0**32-1, intThreshold, 2.0]
         is_delete = np.array([False]*nParticles)
         particleInfo = []
         for j in range(nParticles):
