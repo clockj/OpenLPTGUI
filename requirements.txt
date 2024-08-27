@@ -3,8 +3,8 @@ pandas==2.1.4
 matplotlib==3.8.2
 shapely==2.0.2
 PyInstaller==6.3.0
-opencv-python==4.10.0
 pydicom==2.4.4
 scipy==1.11.4
+opencv-python
 dearpygui==1.10.1
 tk==0.1.0
