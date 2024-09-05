@@ -26,6 +26,7 @@ class Vsc:
         self.tracksFilePath = None
         self.tracksFileName = None
         self.tracks = None
+        self.voxelSize = None # voxel size [physical unit]
         self.goodTracksThreshold = None
         self.particleInfo = None
         
@@ -46,7 +47,10 @@ class Vsc:
             dpg.configure_item('noVscCam', show=True)
             return
         
-        self.goodTracksThreshold = dpg.get_value('inputVscGoodTracksThreshold')
+        self.voxelSize = dpg.get_value('inputVscVoxelSize')
+        print('Voxel size:', self.voxelSize)
+        
+        self.goodTracksThreshold = dpg.get_value('inputVscGoodTracksThreshold') * self.voxelSize
         
         # init
         dpg.set_value('vscStatus', 'Status: Start!')
@@ -188,7 +192,7 @@ class Vsc:
         # check triangulation error
         # particle info: (WorldX, WorldY, WorldZ, Cam1ImgX, Cam1ImgY, ...)
         searchR = dpg.get_value('inputVscParticleRadius') * 0.75
-        errThreshold = dpg.get_value('inputVscTriangulationThreshold')
+        errThreshold = dpg.get_value('inputVscTriangulationThreshold') * self.voxelSize
         intThreshold = dpg.get_value('inputVscIntensityThreshold')
         
         properties = [2.0**32-1, intThreshold, 2.0]
@@ -606,4 +610,8 @@ class Vsc:
         
     def cancelExportVsc(self, sender=None, app_data=None):
         dpg.hide_item('dir_dialog_vscOutput')
+        
+    def helpVoxelSize(self, sender=None, app_data=None):
+        dpg.set_value('vsc_helpText', 'Voxel size is the physical size of a voxel in the 3D space. This value is determined by the camera resolution and the view volume size. If the camera resolution is 1024x1024 and the view volume is [-20,20]x[-20,20]x[-20,20], this value could be set as 40/1000=0.04.')
+        dpg.configure_item('vsc_help', show=True)
     
