@@ -38,17 +38,21 @@ def showVSC(callbacks):
             
 
             dpg.add_text('4. Volume Self Calibration')
-            dpg.add_text('Tracks fitting threshold: (view volume size / 1000)')
-            dpg.add_input_float(tag='inputVscGoodTracksThreshold', default_value=0.04)
+            with dpg.group(horizontal=True):
+                dpg.add_text('Voxel size: [physical unit]')
+                dpg.add_button(label='?', callback=callbacks.vsc.helpVoxelSize)
+            dpg.add_input_float(tag='inputVscVoxelSize', default_value=0.04, step=-1)
+            dpg.add_text('Tracks fitting threshold: [vox]')
+            dpg.add_input_float(tag='inputVscGoodTracksThreshold', default_value=1, step=-1)
             dpg.add_text('Number of particles:')
-            dpg.add_input_int(tag='inputVscNumParticles', default_value=4000)
-            dpg.add_text('Particle Radius: [pix]')
-            dpg.add_input_int(tag='inputVscParticleRadius', default_value=4)
+            dpg.add_input_int(tag='inputVscNumParticles', default_value=4000, step=-1)
+            dpg.add_text('Particle Radius: [px]')
+            dpg.add_input_int(tag='inputVscParticleRadius', default_value=4, step=-1)
             dpg.add_text('Particle intensity threshold: ')
-            dpg.add_input_int(tag='inputVscIntensityThreshold', default_value=60)
-            dpg.add_text('Triangulation Threshold: [physical unit]')
-            dpg.add_input_float(tag='inputVscTriangulationThreshold', default_value=2.5)
-            dpg.add_text('Select fix cameras')
+            dpg.add_input_int(tag='inputVscIntensityThreshold', default_value=60, step=-1)
+            dpg.add_text('Triangulation Threshold: [vox]')
+            dpg.add_input_float(tag='inputVscTriangulationThreshold', default_value=2.5, step=-1)
+            dpg.add_text('Select fixed cameras')
             with dpg.table(header_row=True, policy=dpg.mvTable_SizingFixedFit, row_background=True,
                 resizable=True, no_host_extendX=False, hideable=True,
                 borders_innerV=True, delay_search=True, borders_outerV=True, borders_innerH=True,
@@ -96,7 +100,15 @@ def showVSC(callbacks):
             with dpg.window(label="ERROR! Import more camera files!", modal=True, show=False, tag="noVscCam", no_title_bar=False):
                 dpg.add_text("ERROR: You must import at least 2 cameras.")
                 dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("noVscCam", show=False))
-        
+
+            # help window shown in the middle
+            with dpg.window(label="Help!", modal=True, show=False, tag="vsc_help", no_title_bar=False, width=0.3*subwindow_width, height=0.3*subwindow_height, pos=[0.35*subwindow_width,0.35*subwindow_height]):
+                dpg.add_text("", tag="vsc_helpText", wrap=0.295*subwindow_width)
+                dpg.add_text("")
+                dpg.add_separator()
+                dpg.add_button(label="OK", width=-1, callback=lambda: dpg.configure_item("vsc_help", show=False))
+                
+            
         with dpg.child_window(tag='vscOutputParent', horizontal_scrollbar=True):
 
             dpg.add_text('VSC Outputs')

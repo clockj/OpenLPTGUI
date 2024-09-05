@@ -71,7 +71,7 @@ def showConfig(callbacks):
                 dpg.add_input_floatx(tag='lptRun_viewVolume_z_input', label='(z_min,z_max)', width=0.3*subwindow_width, default_value=[-20, 20], size=2)
 
                 with dpg.group(horizontal=True):
-                    dpg.add_text('5. Enter voxel to physical unit ratio:')
+                    dpg.add_text('5. Enter voxel size [in physical unit]:')
                     dpg.add_button(label='?', callback=callbacks.lptRun.helpVoxToMM)
                 dpg.add_text('e.g. if use 1000^3 voxel, ratio = (xmax-xmin)/1000')
                 dpg.add_input_float(tag='lptRun_voxelToMM_input', default_value=0.04)

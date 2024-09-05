@@ -1,0 +1,88 @@
+\begin{thebibliography}{10}
+
+\bibitem{barta2024proptv}
+Robin Barta, Christian Bauer, Sebastian Herzog, Daniel Schiepel, and Claus Wagner.
+\newblock proptv: A probability-based particle tracking velocimetry framework.
+\newblock {\em Journal of computational physics}, 514:113212, 2024.
+
+\bibitem{masuk2021towards}
+Ashik Ullah~Mohammad Masuk, Yinghe Qi, Ashwanth~KR Salibindla, and Rui Ni.
+\newblock Towards a phenomenological model on the deformation and orientation dynamics of finite-sized bubbles in both quiescent and turbulent media.
+\newblock {\em Journal of Fluid Mechanics}, 920:A4, 2021.
+
+\bibitem{masuk2021orientational}
+Ashik Ullah~Mohammad Masuk, Ashwanth~KR Salibindla, and Rui Ni.
+\newblock The orientational dynamics of deformable finite-sized bubbles in turbulence.
+\newblock {\em Journal of Fluid Mechanics}, 915:A79, 2021.
+
+\bibitem{masuk2021simultaneous}
+Ashik Ullah~Mohammad Masuk, Ashwanth~KR Salibindla, and Rui Ni.
+\newblock Simultaneous measurements of deforming hinze-scale bubbles with surrounding turbulence.
+\newblock {\em Journal of Fluid Mechanics}, 910:A21, 2021.
+
+\bibitem{nishino1989three}
+Koichi Nishino, Nobuhide Kasagi, and Masaru Hirata.
+\newblock Three-dimensional particle tracking velocimetry based on automated digital image processing.
+\newblock 1989.
+
+\bibitem{papantoniou1989analyzing}
+D~Papantoniou and Th~Dracos.
+\newblock Analyzing 3-d turbulent motions in open channel flow by use of stereoscopy and particle tracking.
+\newblock In {\em Advances in Turbulence 2: Proceedings of the Second European Turbulence Conference, Berlin, August 30--September 2, 1988}, pages 278--285. Springer, 1989.
+
+\bibitem{qi2020towards}
+Yinghe Qi, Ashik Ullah~Mohammad Masuk, and Rui Ni.
+\newblock Towards a model of bubble breakup in turbulence through experimental constraints.
+\newblock {\em International Journal of Multiphase Flow}, 132:103397, 2020.
+
+\bibitem{qi2022fragmentation}
+Yinghe Qi, Shiyong Tan, Noah Corbitt, Carl Urbanik, Ashwanth~KR Salibindla, and Rui Ni.
+\newblock Fragmentation in turbulence by small eddies.
+\newblock {\em Nature communications}, 13(1):469, 2022.
+
+\bibitem{salibindla2021experimental}
+Ashwanth~KR Salibindla, Ashik Ullah~Mohammad Masuk, and Rui Ni.
+\newblock Experimental investigation of the acceleration statistics and added-mass force of deformable bubbles in intense turbulence.
+\newblock {\em Journal of Fluid Mechanics}, 912:A50, 2021.
+
+\bibitem{salibindla2020lift}
+Ashwanth~KR Salibindla, Ashik Ullah~Mohammad Masuk, Shiyong Tan, and Rui Ni.
+\newblock Lift and drag coefficients of deformable bubbles in intense turbulence determined from bubble rise velocity.
+\newblock {\em Journal of Fluid Mechanics}, 894:A20, 2020.
+
+\bibitem{schanz2016shake}
+Daniel Schanz, Sebastian Gesemann, and Andreas Schr{\"o}der.
+\newblock Shake-the-box: Lagrangian particle tracking at high particle image densities.
+\newblock {\em Experiments in fluids}, 57:1--27, 2016.
+
+\bibitem{shnapp2022myptv}
+Ron Shnapp.
+\newblock Myptv: A python package for 3d particle tracking.
+\newblock {\em Journal of Open Source Software}, 7(75):4398, 2022.
+
+\bibitem{tan2022universality}
+Shiyong Tan and Rui Ni.
+\newblock Universality and intermittency of pair dispersion in turbulence.
+\newblock {\em Physical Review Letters}, 128(11):114502, 2022.
+
+\bibitem{tan2020introducing}
+Shiyong Tan, Ashwanth Salibindla, Ashik Ullah~Mohammad Masuk, and Rui Ni.
+\newblock Introducing openlpt: new method of removing ghost particles and high-concentration particle shadow tracking.
+\newblock {\em Experiments in Fluids}, 61:1--16, 2020.
+
+\bibitem{tan2023scalings}
+Shiyong Tan, Xu~Xu, Yinghe Qi, and Rui Ni.
+\newblock Scalings and decay of homogeneous, nearly isotropic turbulence behind a jet array.
+\newblock {\em Physical Review Fluids}, 8(2):024603, 2023.
+
+\bibitem{theriault2014protocol}
+Diane~H Theriault, Nathan~W Fuller, Brandon~E Jackson, Evan Bluhm, Dennis Evangelista, Zheng Wu, Margrit Betke, and Tyson~L Hedrick.
+\newblock A protocol and calibration method for accurate multi-camera field videography.
+\newblock {\em Journal of Experimental Biology}, 217(11):1843--1848, 2014.
+
+\bibitem{wieneke2012iterative}
+Bernhard Wieneke.
+\newblock Iterative reconstruction of volumetric particle distribution.
+\newblock {\em Measurement Science and Technology}, 24(2):024008, 2012.
+
+\end{thebibliography}

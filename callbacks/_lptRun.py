@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import pandas as pd
 import os
+import shutil
 import itertools
 from scipy.optimize import minimize
 import time
@@ -550,16 +551,46 @@ class LptRun:
         # update image 
         img = lpt.math.matrix_to_numpy(img).astype('uint'+str(self.mainParams['nDigit']))
         img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+        
         for obj2d in obj2d_list:
-            cv2.circle(img, (int(round(obj2d._pt_center[0])), int(round(obj2d._pt_center[1]))), 1, (0,0,255), 1)
+            # cv2.circle(img, (int(round(obj2d._pt_center[0])), int(round(obj2d._pt_center[1]))), 1, (0,0,255), 1)
             # self.draw_plus(img, (int(round(obj2d._pt_center[0])), int(round(obj2d._pt_center[1]))))
+            img[int(round(obj2d._pt_center[1])), int(round(obj2d._pt_center[0]))] = [0,0,255]
+        
         Texture.createTexture('lptRun_Run_Plot', np.flipud(img))
        
     def runOpenLPT(self, sender=None, app_data=None):      
         # run openlpt
         lpt.run(self.mainConfigFile)
         dpg.set_value('lptRun_Run_processStatus', 'Status: Finish!')
-
+        
+        # copy the results to the output folder 
+        frame_start = self.mainParams['frameRange'][0]
+        frame_end = self.mainParams['frameRange'][1]
+        convframeID_save = np.arange(frame_start, frame_end, 500).astype(np.int32)
+        convframeID_save = convframeID_save[convframeID_save>frame_start]
+        if self.mainParams['isLoadTracks']:
+            convframeID_save = convframeID_save[convframeID_save>self.mainParams['prevFrameID']]
+        
+        for i in range(len(self.mainParams['objectTypes'])):
+            resultFolder = os.path.join(self.mainParams['resultFolder'], self.mainParams['objectTypes'][i]+'_'+str(i))
+            outputFolder = os.path.join(resultFolder, 'OutputTrack')
+            os.makedirs(outputFolder, exist_ok=True)
+            
+            # move last frame data to the output folder 
+            fileList = ['ExitTrack_'+str(frame_end)+'.csv', 'LongTrackActive_'+str(frame_end)+'.csv', 'LongTrackInactive_'+str(frame_end)+'.csv']
+            for file in fileList:
+                shutil.copy(os.path.join(resultFolder, file), os.path.join(outputFolder, file))
+            
+            # move convergence data to the output folder
+            for frameID in convframeID_save:
+                fileList = ['ExitTrack_'+str(frameID)+'.csv', 'LongTrackInactive_'+str(frameID)+'.csv']
+                for file in fileList:
+                    shutil.copy(os.path.join(resultFolder, file), os.path.join(outputFolder, file))
+                    
+        print('Finish copying track file!')
+            
+            
     def openTracksFile(self, sender=None, app_data=None):
         # open tracks file
         self.tracksFilePath = []
