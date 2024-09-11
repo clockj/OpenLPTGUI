@@ -194,6 +194,7 @@ class ContourExtraction:
         self.redrawContours()
     
     def createAxis(self, sender=None, app_data=None):
+        tagName = ['BL', 'TL', 'TR', 'BR']
         if self.selectCornersFlag:
             if self.selectCornersCount < 4:
                 pos = dpg.get_plot_mouse_pos()
@@ -201,7 +202,8 @@ class ContourExtraction:
                 self.corners[self.selectCornersCount, 1] = pos[1]
                 
                 tag = self.selectCornersTag + str(self.selectCornersCount+1)
-                text = dpg.get_value(tag).replace('--', f'({pos[0]:.2f},{pos[1]:.2f})')
+                # text = dpg.get_value(tag).replace('--', f'({pos[0]:.2f},{pos[1]:.2f})')
+                text = tagName[self.selectCornersCount] + f': ({pos[0]:.2f},{pos[1]:.2f})'
                 dpg.set_value(tag, text)
                 
                 image = self.imageProcessing.blocks[Blocks.findContour.value]['output'].copy()

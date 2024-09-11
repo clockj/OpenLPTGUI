@@ -529,6 +529,10 @@ class Vsc:
                 dpg.add_text(self.tracksFileName[i])
                 dpg.add_text(self.tracksFilePath[i])
         
+        
+        for tag in dpg.get_item_children('vscTracksDataTable')[1]:
+            dpg.delete_item(tag)
+        
         for i in range(len(self.tracks.head())):
             with dpg.table_row(parent='vscTracksDataTable'):
                 dpg.add_text(str(self.tracks.iloc[i,0]))
