@@ -4,6 +4,7 @@ import os.path
 import random
 import numpy as np
 import pandas as pd
+from scipy.interpolate import interp1d
 from ._texture import Texture
 from ._blocks import Blocks
 from ._camCalibImgProcess import CamCalibImageProcess
@@ -292,37 +293,67 @@ class ContourExtraction:
         self.ptXYID[origID,2] = axisID
         self.ptXYID[origID,3] = BottomID
         
-        # find internal points
-        for i in range(1,nx-1):
-            for j in range(1,ny-1):
-                # compute horizontal line
-                pt1 = leftAxisPoints[j]
-                pt2 = rightAxisPoints[j]
-                vec = pt2 - pt1
-                vec /= np.linalg.norm(vec)
-                lineX = [pt1, vec]
+        # # find internal points
+        # for i in range(1,nx-1):
+        #     for j in range(1,ny-1):
+        #         # compute horizontal line
+        #         pt1 = leftAxisPoints[j]
+        #         pt2 = rightAxisPoints[j]
+        #         vec = pt2 - pt1
+        #         vec /= np.linalg.norm(vec)
+        #         lineX = [pt1, vec]
                 
-                # compute vertical line
-                # pt1 = bottomAxisPoints[i]
-                # pt2 = topAxisPoints[i]
-                pt1 = topAxisPoints[i]
-                pt2 = bottomAxisPoints[i]
-                vec = pt2 - pt1
-                vec /= np.linalg.norm(vec)
-                lineY = [pt1, vec]
+        #         # compute vertical line
+        #         # pt1 = bottomAxisPoints[i]
+        #         # pt2 = topAxisPoints[i]
+        #         pt1 = topAxisPoints[i]
+        #         pt2 = bottomAxisPoints[i]
+        #         vec = pt2 - pt1
+        #         vec /= np.linalg.norm(vec)
+        #         lineY = [pt1, vec]
 
-                # compute cross point
-                ptGrid = self.findCrossPoint(lineX, lineY)
+        #         # compute cross point
+        #         ptGrid = self.findCrossPoint(lineX, lineY)
                 
-                # find closest contour center
-                diff = np.sum(np.square(centers - ptGrid), axis=1)
-                id = np.argmin(diff)
+        #         # find closest contour center
+        #         diff = np.sum(np.square(centers - ptGrid), axis=1)
+        #         id = np.argmin(diff)
                 
-                if diff[id] < threshold:
-                    self.ptXYID[id, 2] = LeftID + i * signX
-                    # self.ptXYID[id, 3] = BottomID + j * signY
-                    self.ptXYID[id, 3] = TopID + j * signY
-                    
+        #         if diff[id] < threshold:
+        #             self.ptXYID[id, 2] = LeftID + i * signX
+        #             # self.ptXYID[id, 3] = BottomID + j * signY
+        #             self.ptXYID[id, 3] = TopID + j * signY
+        
+        # find both internal and external points
+        # interpolate horizontal and vertical lines 
+        vec = rightAxisPoints - leftAxisPoints
+        # vec /= np.linalg.norm(vec, axis=1).reshape(-1,1)
+        theta = np.arctan2(vec[:,1], vec[:,0]).reshape(-1,1)
+        horizontal_lines = np.hstack([leftAxisPoints, theta])
+        horizontal_id = np.arange(TopID, BottomID+signY, signY)
+        f_horizontal = interp1d(horizontal_id, horizontal_lines, axis=0, fill_value='extrapolate', kind='linear')
+        
+        # towards +Y direction
+        self.findPointsID(f_horizontal, centers, axisThreshold, TopID, signY, 'y')
+        # towards -Y direction
+        self.findPointsID(f_horizontal, centers, axisThreshold, TopID-signY, -signY, 'y')
+            
+        vec = bottomAxisPoints - topAxisPoints
+        # vec /= np.linalg.norm(vec, axis=1).reshape(-1,1)
+        theta = np.arctan2(vec[:,1], vec[:,0]).reshape(-1,1)
+        vertical_lines = np.hstack([topAxisPoints, theta])
+        vertical_id = np.arange(LeftID, RightID+signX, signX)
+        f_vertical = interp1d(vertical_id, vertical_lines, axis=0, fill_value='extrapolate', kind='linear')
+        
+        # towards +X direction
+        self.findPointsID(f_vertical, centers, axisThreshold, LeftID, signX, 'x')
+        # towards -X direction
+        self.findPointsID(f_vertical, centers, axisThreshold, LeftID-signX, -signX, 'x')
+        
+        # set both xy id to nan if one of them is nan
+        self.ptXYID[np.isnan(self.ptXYID[:,2]),2:4] = np.nan
+        self.ptXYID[np.isnan(self.ptXYID[:,3]),2:4] = np.nan
+              
         # plot idex 
         # image = self.imageProcessing.blocks[self.imageProcessing.getLastActiveBeforeMethod('findContour')]['output'].copy()
         image = self.imageProcessing.blocks[Blocks.findContour.value]['output'].copy()
@@ -357,6 +388,15 @@ class ContourExtraction:
         cosTheta = np.dot(vec2, vec)
         sinTheta = np.sqrt(1 - cosTheta**2)
         return sinTheta * diffMag
+    
+    def isPointAboveLine(self, pt, line):
+        pt1, vec = line
+        value = None
+        if pt.shape[0] == 1:
+            value = (pt[0] - pt1[0]) * vec[1] - (pt[1] - pt1[1]) * vec[0]
+        else:
+            value = (pt[:,0] - pt1[0]) * vec[1] - (pt[:,1] - pt1[1]) * vec[0]
+        return value
     
     def findAxisPoints(self, axisBoundary, centers, threshold, axisName, npts, startID, endID, sign): 
         # centers: mouseX, mouseY
@@ -436,6 +476,33 @@ class ContourExtraction:
             
         return axisPoints, origID, axisID
     
+    def findPointsID(self, f_interp, centers, threshold, startID, sign, axisName):
+        imgBoundary = np.array([[0,self.height-1],[self.width-1,self.height-1],[self.width-1,0],[0,0]])
+        
+        if axisName == 'x':
+            axisID = 2
+        elif axisName == 'y':
+            axisID = 3
+        else:
+            RuntimeError('findPointsID Error: Invalid axisName')
+        
+        iter = 0
+        id = startID
+        while iter < 1000:
+            line = f_interp(id)
+            line = [np.array([line[0],line[1]]), np.array([np.cos(line[2]), np.sin(line[2])])]
+            
+            value = self.isPointAboveLine(imgBoundary, line)
+            if np.all(value > 0) or np.all(value < 0):
+                break
+            
+            dist = self.findPointLineDistance(centers, line)
+            id_close = np.where((dist < threshold))[0]
+            self.ptXYID[id_close,axisID] = id
+            
+            iter += 1
+            id = id + sign
+    
     def extractWorldCoordinate(self, sender=None, app_data=None):
         mouseAxisXTag = dpg.get_value('mouseAxisX')
         mouseAxisYTag = dpg.get_value('mouseAxisY')
@@ -471,12 +538,11 @@ class ContourExtraction:
         self.centerExport[:,5] = centers[:,0]
         self.centerExport[:,6] = centers[:,1]
         
-        dpg.configure_item('exportCenters', show=True)
-        pass 
+        dpg.configure_item('exportCenters', show=True) 
     
     def openCentersDirectorySelector(self, sender=None, app_data=None): 
         dpg.configure_item('directoryFolderexportCenters', show=True)
-        pass
+        
     
     def selectCentersFolder(self, sender=None, app_data=None):
         self.exportCenterFilePath = app_data['file_path_name']
@@ -485,7 +551,7 @@ class ContourExtraction:
 
         dpg.set_value('centerFileName', 'File Name: ' + self.exportCenterFileName)
         dpg.set_value('centerPathName', 'Complete Path Name: ' + filePath)
-        pass
+        
     
     def exportCentersToFile(self, sender=None, app_data=None):
         if self.exportCenterFilePath is None:
@@ -496,7 +562,7 @@ class ContourExtraction:
         df.to_csv(os.path.join(self.exportCenterFilePath, self.exportCenterFileName),index=False)
         
         dpg.configure_item("exportCenters", show=False)
-        pass
+        
     
     def toggleDrawContours(self, sender = None, app_data = None):
         self.toggleDrawContoursFlag = not self.toggleDrawContoursFlag
@@ -506,7 +572,7 @@ class ContourExtraction:
         else:
             dpg.configure_item('toggleDrawContoursButton', label="Show All Contours")
             self.hideAllContours()
-        pass
+        
 
     def removeContour(self, sender=None, app_data=None):
         self.hideAllContours()
@@ -569,7 +635,7 @@ class ContourExtraction:
         dpg.set_value('exportFileName', 'File Name: ' + self.exportFileName)
         dpg.set_value('exportPathName', 'Complete Path Name: ' + filePath)
 
-        pass
+        
 
     def openDirectorySelector(self, sender=None, app_data=None):
         if dpg.get_value('inputContourId') != '' and dpg.get_value('inputContourNameText') != '':
@@ -586,7 +652,7 @@ class ContourExtraction:
 
         dpg.set_value('exportSelectedFileName', 'File Name: ' + self.exportSelectFileName + '-<id>.txt')
         dpg.set_value('exportSelectedPathName', 'Complete Path Name: ' + filesPath)
-        pass
+        
 
     def exportButtonCall(self, sender, app_data=None):
         auxId = sender[13:]
@@ -597,7 +663,7 @@ class ContourExtraction:
         self.exportFileName = None
         self.exportFilePath = None
         dpg.configure_item('exportContourWindow', show=True)
-        pass
+        
 
     def exportSelectedButtonCall(self, sender=None, app_data=None):
         dpg.set_value('inputSelectedContourNameText', '')
@@ -608,7 +674,7 @@ class ContourExtraction:
         self.exportSelectFileName = None
 
         dpg.configure_item('exportSelectedContourWindow', show=True)
-        pass
+        
 
     def exportSelectedContourToFile(self, sender=None, app_data=None):
         if self.exportSelectPath is None:
@@ -626,7 +692,6 @@ class ContourExtraction:
         self.exportFilePath = None
         self.exportFileName = None
         dpg.configure_item('exportSelectedContourWindow', show=False)
-        pass
 
     def exportIndividualContourToFile(self, sender=None, app_data=None):
         if self.exportFilePath is None:
@@ -637,7 +702,6 @@ class ContourExtraction:
         auxId = int(dpg.get_value("contourIdExportText")[12:])
         self.exportContourToFile(auxId, os.path.join(self.exportFilePath, self.exportFileName))
         dpg.configure_item('exportContourWindow', show=False)
-        pass
 
     def exportContourToFile(self, auxId, path):
         for i in self.contourTableEntry:
@@ -658,7 +722,6 @@ class ContourExtraction:
         xarray.append(xarray[0])
         yarray.append(yarray[0])
         self.export_coords_mesh(path, xarray, yarray, nx, ny, xmin, ymin, xmax, ymax, dx, dy)
-        pass
     
     def export_coords_mesh(self, path, x, y, nx, ny, xmin, ymin, xmax, ymax, dx, dy):
         x = x[::-1]
