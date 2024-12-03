@@ -1,4 +1,4 @@
-# OpenLPTGUI 1.0
+# OpenLPTGUI
 
 OpenLPTGUI 1.0 is a user-friendly GUI written in **python** for [OpenLPT](https://github.com/clockj/OpenLPT.git). OpenLPT is a code for Lagrangian particle tracking, and OpenLPTGUI is a GUI including **camera calibration, image pre-processing, installing/running OpenLPT, and Volume Self-Calibration**. 
 
