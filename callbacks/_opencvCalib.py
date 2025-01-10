@@ -143,7 +143,7 @@ class OpencvCalib:
         # plot calibration points  
         img = self.img.copy()      
         for i in range(pt2D.shape[0]):
-            cv2.circle(img, (int(round(pt2D[i,0,1])), int(round(pt2D[i,0,0]))), 1, (0, 0, 255))
+            cv2.circle(img, (int(round(pt2D[i,0,0])), int(round(pt2D[i,0,1]))), 1, (0, 0, 255))
         
         Texture.updateTexture("calibPlot", img)
         
@@ -244,10 +244,10 @@ class OpencvCalib:
                 dpg.add_text(self.posecalibFileName[i])
                 dpg.add_text(self.posecalibFilePath[i])
         
-        img = np.zeros((self.imgSize[0], self.imgSize[1], 3), np.uint8)
+        img = np.zeros((self.imgSize[1], self.imgSize[0], 3), np.uint8)
         # plot previous calibration points 
         for i in range(pt2d.shape[0]):
-            self.draw_plus(img, (int(round(pt2d[i,1])), int(round(pt2d[i,0]))), (255, 0, 0))   
+            self.draw_plus(img, (int(round(pt2d[i,0])), int(round(pt2d[i,1]))), (255, 0, 0))   
         self.img = img.copy()
         Texture.createTexture("calibPlot", img)
     
